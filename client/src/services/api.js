@@ -14,4 +14,5 @@ export const petsApi = {
   remove: (id) => api.delete(`/pets/${id}`).then((res) => res.data)
 }
 
-export default api
+// export default api
+export const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
