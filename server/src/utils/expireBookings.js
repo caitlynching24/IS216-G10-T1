@@ -1,4 +1,5 @@
 import Booking from '../models/bookingModel.js'
+import Notification from '../models/notificationModel.js'
 import { bookingRange } from './bookingTimes.js'
 
 // Requests the owner never confirmed become 'expired' once their start time passes.
@@ -13,9 +14,27 @@ export async function expireStaleBookings() {
     // quick filter by day first (startDate is midnight of the start day)...
     const candidates = await Booking.find({ status: { $in: UNCONFIRMED_STATUSES }, startDate: { $lte: new Date() } })
     // ...then the exact start time
-    const ids = candidates.filter((b) => bookingRange(b).start <= Date.now()).map((b) => b._id)
-    if (ids.length) {
-      await Booking.updateMany({ _id: { $in: ids }, status: { $in: UNCONFIRMED_STATUSES } }, { status: 'expired' })
+    for (const booking of candidates) {
+      if (bookingRange(booking).start > Date.now()) continue
+
+      const expired = await Booking.findOneAndUpdate(
+        { _id: booking._id, status: { $in: UNCONFIRMED_STATUSES } },
+        { status: 'expired' },
+        { new: true }
+      ).select('ownerId')
+
+      if (expired) {
+        try {
+          await Notification.create({
+            recipient: expired.ownerId,
+            type: 'booking-expired',
+            message: 'Your booking request expired because it was not confirmed before its start time.',
+            booking: expired._id
+          })
+        } catch (err) {
+          console.error('Could not create booking-expired notification:', err.message)
+        }
+      }
     }
   } catch (err) {
     console.error('Could not expire old booking requests:', err.message)

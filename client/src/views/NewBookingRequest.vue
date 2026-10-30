@@ -3,6 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import defaultAvatar from '../assets/img/tempProfile.jpg'
 import { useRoute } from 'vue-router'
 import { formatTime } from '../utils/bookingHelpers.js'
+import { currentUser } from '../services/auth.js'
+import { sendNotification } from '../utils/sendNotification.js'
 import { toDateString, prettyDate } from '../utils/bookingTimeHelpers.js'
 import { checkBookingRequest, buildBookingPayload } from '../utils/bookingRequestRules.js'
 import { SERVICE_PRICES, SERVICE_LABELS, PRICE_LIST_TEXT, OVERNIGHT_FEE, priceForTasks, nightsFor, bookingPrice } from '../utils/servicePrices.js'
@@ -31,8 +33,21 @@ const notes = ref('')
 const overnight = ref(false) // true = the sitter stays the night at the owner's place
 
 const error = ref('')
+const notificationError = ref('')
 const sending = ref(false) // tracks wether the booking request is currently sent to the server 
 const booking = ref(null) // the created booking, once sent
+
+async function notifyBookingRequest() {
+  if (!booking.value) return
+  const sent = await sendNotification(
+    booking.value._id,
+    'booking-requested',
+    `${currentUser.value?.username || 'The owner'} sent you a booking request for ${prettyDate(booking.value.startDate)}.`
+  )
+  notificationError.value = sent
+    ? ''
+    : 'Your booking request was created, but its notifications could not be saved. Try again.'
+}
 
 // returns an array of day dates from start to end, inclusive. Empty if the dates aren't filled in properly.
 const chosenDays = computed(() => {
@@ -71,6 +86,7 @@ const selectedPetList = computed(() => pets.value.filter((p) => selectedPets.val
 
 async function sendRequest() {
   error.value = ''
+  notificationError.value = ''
   // Quick checks before calling the server (the server checks these again). The rules are in utils/bookingRequestRules.js
   const message = checkBookingRequest({
     selectedPets: selectedPets.value,
@@ -93,6 +109,9 @@ async function sendRequest() {
         overnight: overnight.value
       })
     )
+
+    await notifyBookingRequest()
+    
   } catch (err) {
     error.value = err.response?.data?.message || 'Could not send the booking request.'
   } finally {
@@ -135,6 +154,10 @@ onMounted(async () => {
       </p>
       <p class="small">Status: <span class="badge text-bg-warning">{{ booking.status }}</span></p>
       <p v-if="booking.tasks" class="small text-muted">{{ booking.tasks }} care task{{ booking.tasks === 1 ? '' : 's' }} included</p>
+      <div v-if="notificationError" class="alert alert-warning mx-auto" role="alert">
+        {{ notificationError }}
+        <button type="button" class="btn btn-sm btn-outline-dark ms-2" @click="notifyBookingRequest">Retry</button>
+      </div>
       <router-link to="/owner/bookings" class="btn btn-dark mt-2">View My Bookings</router-link>
     </div>
   </div>

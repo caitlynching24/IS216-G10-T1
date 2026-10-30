@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { visitsApi, reviewsApi } from '../services/api.js'
 import { walkApi } from '../services/walkApi.js'
 import { usePhotoPicker } from '../utils/usePhotoPicker.js'
+import { sendPaymentNotification } from '../utils/sendNotification.js'
 import ReviewForm from '../components/ReviewForm.vue'
 
 const props = defineProps({
@@ -171,6 +172,7 @@ async function submitReport() {
     visit.value = await visitsApi.end(visit.value._id, form)
     if (props.today === props.session.booking.endDate) {
       status.value = 'completed'
+      sendPaymentNotification(props.session.booking._id)
     }
     slots.forEach((s) => s.clear())
   } catch (err) {

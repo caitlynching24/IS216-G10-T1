@@ -1,6 +1,7 @@
 import Stripe from 'stripe'
 import Payment from '../models/paymentModel.js'
 import Booking from '../models/bookingModel.js'
+import { notifyPayment } from '../models/notificationModel.js'
 
 // Where Stripe sends the owner back to after paying (our Vue app)
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173'
@@ -16,6 +17,23 @@ function getStripe() {
   }
   if (!stripe) stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
   return stripe
+}
+
+async function markBookingPaidAndNotify(bookingId) {
+  const booking = await Booking.findById(bookingId)
+  if (!booking) return
+
+  if (booking.status !== 'paid') {
+    booking.status = 'paid'
+    await booking.save()
+  }
+
+  try {
+    await notifyPayment(booking, true)
+  } catch (err) {
+    // Payment is already confirmed by Stripe; a notification failure must not undo it.
+    console.error('Could not create payment-received notifications:', err.message)
+  }
 }
 
 // POST /api/payments/checkout   body: { bookingId }
@@ -80,6 +98,7 @@ export const confirmCheckout = async (req, res) => {
     return res.status(404).json({ message: 'Payment not found' })
   }
   if (payment.status === 'successful') {
+    await markBookingPaidAndNotify(payment.bookingId)
     return res.json({ message: 'Payment successful', payment }) // already confirmed (e.g. the page was refreshed)
   }
 
@@ -98,11 +117,7 @@ export const confirmCheckout = async (req, res) => {
   payment.cardLast4 = details?.card?.last4 || ''
   await payment.save()
 
-  const booking = await Booking.findById(payment.bookingId)
-  if (booking && booking.status !== 'paid') {
-    booking.status = 'paid'
-    await booking.save()
-  }
+  await markBookingPaidAndNotify(payment.bookingId)
 
   res.json({ message: 'Payment successful', payment })
 }
@@ -117,6 +132,14 @@ export const cancelCheckout = async (req, res) => {
   if (payment.status === 'pending') {
     payment.status = 'rejected'
     await payment.save()
+
+    try {
+      const booking = await Booking.findById(payment.bookingId).select('ownerId totalPrice')
+      if (booking) await notifyPayment(booking, false)
+    } catch (err) {
+      // A notification failure must not prevent the cancellation from completing.
+      console.error('Could not create payment-failed notification:', err.message)
+    }
   }
   res.json(payment)
 }

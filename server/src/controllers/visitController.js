@@ -6,6 +6,7 @@ import Walk from '../models/walkModel.js'
 import { sgtMidnight, toSgtDateString } from '../models/Availability.js'
 import { uploadImage, deleteImage } from '../config/cloudinary.js'
 import User from '../models/UserModel.js'
+import { notifyPaymentDue } from '../models/notificationModel.js'
 
 const STARTABLE = ['confirmed', 'in-progress'] // owners pay at the end, so sessions start once the owner has confirmed
 
@@ -235,6 +236,12 @@ export async function endVisit(req, res) {
   if (booking && visit.date === toSgtDateString(booking.endDate)) {
     booking.status = 'completed'
     await booking.save()
+    try {
+      await notifyPaymentDue(booking)
+    } catch (err) {
+      // The booking completion should stand even if saving its notification fails.
+      console.error('Could not create payment-due notification:', err.message)
+    }
   }
   res.json(visit)
 }

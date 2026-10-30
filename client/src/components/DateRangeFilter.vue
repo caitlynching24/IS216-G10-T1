@@ -1,10 +1,13 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 
 const from = defineModel('from', { type: String, default: '' })
 const to = defineModel('to', { type: String, default: '' })
 
 const showDatePicker = ref(false)
+const dateRangeButton = ref(null)
+const availabilityPicker = ref(null)
+const pickerPosition = ref({ top: '8px', left: '8px' })
 const draftFrom = ref('')
 const draftTo = ref('')
 const calendarMonth = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
@@ -65,8 +68,46 @@ function toggleDatePicker() {
   showDatePicker.value = !showDatePicker.value
 }
 
+function positionPicker() {
+  const button = dateRangeButton.value
+  const picker = availabilityPicker.value
+  if (!button || !picker) return
+
+  const buttonRect = button.getBoundingClientRect()
+  const gap = 8
+  const width = Math.min(picker.offsetWidth, window.innerWidth - gap * 2)
+  const height = picker.offsetHeight
+  const left = Math.max(gap, Math.min(buttonRect.left, window.innerWidth - width - gap))
+  const roomBelow = window.innerHeight - buttonRect.bottom - gap
+  const top = roomBelow >= height + gap
+    ? buttonRect.bottom + gap
+    : Math.max(gap, buttonRect.top - height - gap)
+
+  pickerPosition.value = { top: `${top}px`, left: `${left}px`, width: `${width}px` }
+}
+
+function removePositionListeners() {
+  window.removeEventListener('resize', positionPicker)
+  window.removeEventListener('scroll', positionPicker, true)
+}
+
+watch(showDatePicker, async (isOpen) => {
+  if (!isOpen) {
+    removePositionListeners()
+    return
+  }
+
+  await nextTick()
+  if (!showDatePicker.value) return
+  positionPicker()
+  window.addEventListener('resize', positionPicker)
+  window.addEventListener('scroll', positionPicker, true)
+}, { flush: 'post' })
+
 // parent's "Clear filters" resets from/to; keep the drafts in step
 watch([from, to], ([f, t]) => { draftFrom.value = f; draftTo.value = t })
+
+onBeforeUnmount(removePositionListeners)
 </script>
 
 <template>
@@ -74,11 +115,12 @@ watch([from, to], ([f, t]) => { draftFrom.value = f; draftTo.value = t })
     <label class="form-label fw-bold">Available dates</label>
     <div class="position-relative mb-3">
         <!-- paste your existing toggle button + v-if="showDatePicker" popup markup here, unchanged -->
-        <button type="button" class="form-control text-start d-flex justify-content-between align-items-center" aria-haspopup="dialog" :aria-expanded="showDatePicker" @click="toggleDatePicker">
+        <button ref="dateRangeButton" type="button" class="form-control text-start d-flex justify-content-between align-items-center" aria-haspopup="dialog" :aria-expanded="showDatePicker" @click="toggleDatePicker">
             <span>{{ dateRangeLabel }}</span><span aria-hidden="true">▦</span>
         </button>
         <!-- show date calandar to pick date  -->
-        <div v-if="showDatePicker" class="availability-picker shadow bg-white border rounded p-3" role="dialog" aria-label="Choose available date range">
+        <Teleport to="body">
+        <div v-if="showDatePicker" ref="availabilityPicker" :style="pickerPosition" class="availability-picker shadow bg-white border rounded p-3" role="dialog" aria-label="Choose available date range">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <button type="button" class="btn btn-sm btn-outline-secondary" aria-label="Previous month" @click="changeCalendarMonth(-1)">‹</button>
                 <strong>{{ calendarTitle }}</strong>
@@ -102,6 +144,7 @@ watch([from, to], ([f, t]) => { draftFrom.value = f; draftTo.value = t })
                 <button type="button" class="btn btn-primary btn-sm apply-days" :disabled="!draftFrom || !draftTo" @click="confirmAvailabilityDates">Confirm dates</button>
             </div>
         </div>
+        </Teleport>
     </div>
     
   </div>
@@ -111,9 +154,13 @@ watch([from, to], ([f, t]) => { draftFrom.value = f; draftTo.value = t })
 /* paste .availability-picker, .availability-calendar, .weekday, .day-cell*, .calendar-day* here */
 
 .availability-picker {
+  position: fixed;
+  z-index: 1080;
   width: 300px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
   font-family: Roboto, system-ui, -apple-system, sans-serif;
-  
 }
 
 .availability-calendar {

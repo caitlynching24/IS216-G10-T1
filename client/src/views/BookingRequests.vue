@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { currentUser } from '../services/auth.js'
+import { sendNotification } from '../utils/sendNotification.js'
 import { bookingsApi } from '../services/bookingApi.js'
 import BookingTable from '../components/BookingTable.vue'
 import BookingTabs from '../components/BookingTabs.vue'
@@ -66,6 +68,13 @@ async function respond(id, status) {
   try {
     const updated = await bookingsApi.updateStatus(id, status)
     booking.status = updated.status
+    sendNotification(
+      id,
+      status === 'accepted' ? 'booking-accepted' : 'booking-declined',
+      status === 'accepted'
+        ? `${currentUser.value.username} accepted your booking request. Confirm it to lock it in.`
+        : `${currentUser.value.username} declined your booking request.`
+    )
     message.value = status === 'accepted'
       ? 'Request accepted ✅ The hours are held for you while the owner confirms. It goes into your Google Calendar once confirmed.'
       : 'Request declined.'
@@ -88,6 +97,7 @@ async function cancelBooking(id) {
     const booking = bookings.value.find((b) => b._id === id)
     booking.status = updated.status
     booking.cancelledBy = updated.cancelledBy
+    sendNotification(id, 'booking-cancelled', `${currentUser.value.username} cancelled your booking. You can book another sitter.`)
     message.value = 'Booking cancelled. The hours are free on your calendar again.'
   } catch (err) {
     actionError.value = err.response?.data?.message || 'Could not cancel the booking.'

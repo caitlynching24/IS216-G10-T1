@@ -6,7 +6,6 @@ const CHECK_EVERY_MS = 10000
 
 // One shared count for the whole app: the navbar badge shows it, and the
 // Notifications page updates it straight away when something is marked as read.
-// (It's created once, outside any function, so every file that imports it gets the same ref.)
 export const unreadCount = ref(0)
 
 let timer = null
