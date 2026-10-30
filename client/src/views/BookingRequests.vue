@@ -5,13 +5,14 @@ import { bookingsApi } from '../services/bookingApi.js'
 import BookingTable from '../components/BookingTable.vue'
 import BookingTabs from '../components/BookingTabs.vue'
 
-// /sitter/requests: every booking made with this sitter, sorted into Pending / Awaiting owner / Upcoming / Past tabs
-// (like the tabs on the owner's My Bookings)
+// /sitter/requests: every booking made with this sitter, sorted into
+// To accept / Awaiting confirmation / Upcoming / Awaiting payment / Past tabs (like the tabs on the owner's My Bookings)
 const TABS = [
-  { key: 'pending', label: 'Pending', statuses: ['pending'] },
-  { key: 'awaiting-owner', label: 'Awaiting owner', statuses: ['accepted'] }, // accepted, waiting for the owner to confirm
+  { key: 'pending', label: 'To accept', statuses: ['pending'] }, // new requests the sitter hasn't answered
+  { key: 'awaiting-confirmation', label: 'Awaiting confirmation', statuses: ['accepted'] }, // accepted, waiting for the owner to confirm
   { key: 'upcoming', label: 'Upcoming', statuses: ['confirmed', 'in-progress'] },
-  { key: 'past', label: 'Past', statuses: ['completed', 'paid', 'declined', 'cancelled', 'expired'] }
+  { key: 'awaiting-payment', label: 'Awaiting payment', statuses: ['completed'] }, // done, the owner hasn't paid yet
+  { key: 'past', label: 'Past', statuses: ['paid', 'declined', 'cancelled', 'expired'] }
 ]
 
 const route = useRoute()

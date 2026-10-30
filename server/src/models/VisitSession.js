@@ -10,9 +10,15 @@ const completedTaskSchema = new mongoose.Schema({
     type: String, 
     required: true 
 },         
-  at: { 
-    type: Date, 
-    default: Date.now 
+  at: {
+    type: Date,
+    default: Date.now
+},
+  // walk tasks only: the tracked walk that ticked this task (path, distance, time, off-route stats)
+  walk: {
+    type: ObjectId,
+    ref: 'Walk',
+    default: null
 }
 })
 

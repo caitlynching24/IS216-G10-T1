@@ -8,7 +8,8 @@ const api = axios.create({
 // A sitter's walk along an owner's route (server: /api/walks)
 // No try/catch here: errors are passed up to the page, which shows the message to the user
 export const walkApi = {
-  // ids: { routeId, bookingId?, visitId?, taskId? }
+  // ids: { visitId, taskId }: a walk task in the sitter's session for today.
+  // If a walk for that task is already under way, the server sends that one back.
   async create(ids) {
     const res = await api.post('/walks', ids)
     return res.data

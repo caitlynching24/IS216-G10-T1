@@ -1,6 +1,8 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { visitsApi, reviewsApi } from '../services/api.js'
+import { walkApi } from '../services/walkApi.js'
 import { usePhotoPicker } from '../utils/usePhotoPicker.js'
 import ReviewForm from '../components/ReviewForm.vue'
 
@@ -103,6 +105,47 @@ async function tick(item, n, event) {
     event.target.checked = n <= current         
   } finally {
     savingTask.value = false
+  }
+}
+
+// ---- Walk tasks: ticked by doing a tracked walk, not by hand ----
+const router = useRouter()
+const startingWalk = ref(null) // id of the walk task being started
+
+const isWalkTask = (item) => item.category === 'walk'
+
+// the walks that ticked this task today: [{ walk: walkId, ... }]
+function walksFor(item) {
+  return (visit.value?.completedTasks ?? []).filter((t) => String(t.task) === String(item._id) && t.walk)
+}
+
+// "Block loop · 1.2 km", or how to walk without a route
+function routeText(item) {
+  const r = item.walkRoute
+  if (r?.mode === 'route') {
+    const km = r.distanceM >= 1000 ? `${(r.distanceM / 1000).toFixed(1)} km` : `${r.distanceM} m`
+    return `Route: ${r.name} · ${km}`
+  }
+  return 'No set route: follow the instructions'
+}
+
+// Opens the walk page for this task. The server gives back the walk already under way
+// for this task if there is one, so pressing this again carries on with the same walk.
+async function startWalk(item) {
+  startingWalk.value = item._id
+  actionError.value = ''
+  try {
+    const walk = await walkApi.create({ visitId: visit.value._id, taskId: item._id })
+    router.push({ name: 'sitter-walk', params: { id: walk._id } })
+  } catch (err) {
+    if (err.response?.status === 409 && err.response.data.walkId) {
+      // already on another walk: go back to that one
+      router.push({ name: 'sitter-walk', params: { id: err.response.data.walkId } })
+      return
+    }
+    actionError.value = err.response?.data?.message || 'Could not start the walk.'
+  } finally {
+    startingWalk.value = null
   }
 }
 
@@ -217,7 +260,7 @@ watch(status, async (s) => {
             <p v-else class="sc-hint mb-0">Today's session is complete.</p>
           </section>
 
-          <section v-if="session.ownerAddress !== undefined && ['paid', 'in-progress'].includes(status)" class="sc-card">
+          <section v-if="session.ownerAddress !== undefined && ['confirmed', 'in-progress'].includes(status)" class="sc-card">
             <h4 class="sc-title">Where to go</h4>
 
             <template v-if="address">
@@ -258,17 +301,34 @@ watch(status, async (s) => {
             <div v-else class="sc-tasks">
               <div v-for="item in session.items" :key="item._id" class="sc-task">
                 <div class="d-flex gap-1">
+                  <!-- walk tasks: the boxes only show progress; they're ticked by finishing a walk -->
                   <input v-for="n in item.dailyFrequency" :key="n" type="checkbox"
                          class="form-check-input mt-0 task-check"
                          :checked="n <= countFor(item)"
-                         :disabled="!isSitter || !isActive || savingTask"
+                         :disabled="isWalkTask(item) || !isSitter || !isActive || savingTask"
+                         :aria-label="isWalkTask(item) ? `Walk ${n}, ticked when the walk ends` : undefined"
                          @change="tick(item, n, $event)" />
                 </div>
-                <span class="sc-task__title"
-                      :class="{ 'sc-task__title--done': countFor(item) >= item.dailyFrequency }">{{ item.title }}</span>
-                <small v-if="item.dailyFrequency > 1" class="ms-auto text-muted">
+                <div class="flex-grow-1">
+                  <span class="sc-task__title"
+                        :class="{ 'sc-task__title--done': countFor(item) >= item.dailyFrequency }">{{ item.title }}</span>
+                  <template v-if="isWalkTask(item)">
+                    <small class="d-block text-muted">{{ routeText(item) }}</small>
+                    <!-- the sitter can look back at each walk done for this task -->
+                    <small v-if="isSitter && walksFor(item).length" class="d-flex flex-wrap gap-2">
+                      <router-link v-for="(t, i) in walksFor(item)" :key="t._id" class="sc-link"
+                                   :to="{ name: 'sitter-walk', params: { id: t.walk } }">View walk {{ i + 1 }}</router-link>
+                    </small>
+                  </template>
+                </div>
+                <small v-if="item.dailyFrequency > 1" class="text-muted">
                   {{ countFor(item) }}/{{ item.dailyFrequency }}
                 </small>
+                <button v-if="isWalkTask(item) && isSitter && isActive && countFor(item) < item.dailyFrequency"
+                        type="button" class="sc-btn sc-btn--small" :disabled="startingWalk === item._id"
+                        @click="startWalk(item)">
+                  {{ startingWalk === item._id ? 'Opening…' : 'Start walk' }}
+                </button>
               </div>
             </div>
           </section>
@@ -501,6 +561,12 @@ watch(status, async (s) => {
 }
 .sc-btn:disabled {
   opacity: 0.55;
+}
+.sc-btn--small {
+  width: auto;
+  flex: none;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.85rem;
 }
 
 .sc-live {

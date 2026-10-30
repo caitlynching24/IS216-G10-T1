@@ -2,6 +2,7 @@ import mongoose from 'mongoose'
 import Booking from '../models/bookingModel.js'
 import CareChecklist from '../models/CareChecklist.js'
 import VisitSession from '../models/VisitSession.js'
+import Walk from '../models/walkModel.js'
 import { sgtMidnight, toSgtDateString } from '../models/Availability.js'
 import { uploadImage, deleteImage } from '../config/cloudinary.js'
 import User from '../models/UserModel.js'
@@ -163,6 +164,10 @@ export async function setTaskCount(req, res) {
   if (!item) {
     return res.status(404).json({ message: 'Task not found.' })
   }
+  // walk tasks are ticked by finishing a tracked walk (walkController), not by hand
+  if (item.category === 'walk') {
+    return res.status(400).json({ message: 'Walk tasks are ticked off by doing the walk. Press Start walk.' })
+  }
 
   const count = Number(req.body.count)
   if (!Number.isInteger(count) || count < 0 || count > item.dailyFrequency) {
@@ -194,6 +199,11 @@ export async function endVisit(req, res) {
   }
   if (visit.status !== 'active') {
     return res.status(400).json({ message: 'This session is not active.' })
+  }
+
+  // a walk still going on would have nowhere to be ticked off, so it must end first
+  if (await Walk.exists({ visit: visit._id, status: 'in-progress' })) {
+    return res.status(400).json({ message: 'Finish or end the walk you are on before submitting the report.' })
   }
 
   const notes = String(req.body.notes ?? '').trim()

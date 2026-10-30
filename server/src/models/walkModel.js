@@ -1,9 +1,12 @@
 import mongoose from 'mongoose'
 const { ObjectId } = mongoose.Schema.Types
 
-// One walk by a sitter along an owner's route.
+// One walk by a sitter, for one walk task in a visit.
 // It moves through: 'ready' -> 'in-progress' -> 'completed' (or 'ended-early')
 export const WALK_STATUSES = ['ready', 'in-progress', 'completed', 'ended-early']
+// 'route': along one of the owner's recorded routes, checked for going off route
+// 'instructions': no route, the sitter follows the task's written instructions (tracked, but not checked)
+export const WALK_MODES = ['route', 'instructions']
 
 // GeoJSON line, the same shape as WalkRoute.path: [[lng, lat], ...]
 const lineStringSchema = new mongoose.Schema(
@@ -38,16 +41,20 @@ const walkSchema = new mongoose.Schema(
     owner: { type: ObjectId, ref: 'User', required: true, index: true },
     sitter: { type: ObjectId, ref: 'User', required: true, index: true },
 
-    // What the walk belongs to. Optional until booking integration.
+    // What the walk belongs to (walks made before booking integration have null here)
     booking: { type: ObjectId, ref: 'Booking', default: null },
     visit: { type: ObjectId, ref: 'VisitSession', default: null },
     task: { type: ObjectId, default: null },          // the walk task in the booking's care checklist
 
+    mode: { type: String, enum: WALK_MODES, default: 'route' },
+    instructions: { type: String, default: '' },      // the walk task's text, e.g. "30 min around the park"
+
     // A COPY of the route and home at the time the walk was created,
-    // so editing or deleting the route later doesn't change past walks
+    // so editing or deleting the route later doesn't change past walks.
+    // 'instructions' walks have no route, so these stay empty.
     route: { type: ObjectId, ref: 'WalkRoute', default: null },
-    routeName: { type: String, required: true },
-    plannedPath: { type: lineStringSchema, required: true },
+    routeName: { type: String, default: '' },
+    plannedPath: { type: lineStringSchema, default: undefined },
     home: { type: pointSchema, required: true },
 
     status: { type: String, enum: WALK_STATUSES, default: 'ready' },
