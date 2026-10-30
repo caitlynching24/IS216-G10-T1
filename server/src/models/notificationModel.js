@@ -45,7 +45,7 @@ export async function notify(recipient, type, message, { walk = null, booking = 
   return Notification.create({ recipient, type, message, walk, booking })
 }
 
-async function notifyBookingOnce(booking, recipient, type, message) {
+export async function notifyBookingOnce(booking, recipient, type, message) {
   const existing = await Notification.findOne({ booking: booking._id, recipient, type })
   if (existing) return existing
   return notify(recipient, type, message, { booking: booking._id })
