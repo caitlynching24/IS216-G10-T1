@@ -67,7 +67,6 @@ async function handleLogout() {
         <span class="navbar-toggler-icon"></span>
       </button>
       <router-link class="navbar-brand" to="/">
-        <!-- <span class="brand-emoji">🐾</span>  -->
         PetSociety
       </router-link>
       <template v-if="!hideElem">
@@ -93,7 +92,7 @@ async function handleLogout() {
                         <li v-if="currentUser?.role === 'owner' && !hideElem" class="nav-item">
               <router-link class="nav-link d-flex align-items-center gap-1" to="/owner/notifications"
                            :aria-label="unreadCount ? `Notifications, ${unreadCount} unread` : 'Notifications'">
-                🔔 Notifications
+                🕭 Notifications
                 <span v-if="unreadCount" class="badge rounded-pill bg-danger">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
               </router-link>
             </li>

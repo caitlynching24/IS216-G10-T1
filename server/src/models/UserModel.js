@@ -69,13 +69,22 @@ const userSchema = new mongoose.Schema({
   },
 
   ownerProfile: {
-    address: { type: 
+    address: { 
+      type: 
       addressSchema, 
-      select: false },
+      select: false 
+    },
     // Services this owner's pets need (e.g. Grooming), used to recommend matching sitters
     servicesNeeded: {
       type: [{ type: String, enum: services }],
       default: []
+    },
+    instructions: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: 300,
+      select: false
     }
   },
 

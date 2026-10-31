@@ -217,7 +217,7 @@ watch(status, async (s) => {
             <p v-else class="sc-hint mb-0">Today's session is complete.</p>
           </section>
 
-          <section v-if="session.ownerAddress !== undefined && ['paid', 'in-progress'].includes(status)" class="sc-card">
+          <section v-if="session.ownerAddress !== undefined && ['confirmed', 'in-progress'].includes(status)" class="sc-card">
             <h4 class="sc-title">Where to go</h4>
 
             <template v-if="address">
@@ -226,8 +226,16 @@ watch(status, async (s) => {
                 <span v-if="address.unit">{{ address.unit }}</span>
                 <span v-if="address.postalCode">Singapore {{ address.postalCode }}</span>
               </address>
+
               <a :href="mapsUrl" target="_blank" rel="noopener" class="sc-link">Open in Google Maps</a>
-              <p class="sc-hint mt-2 mb-0">Shared with you because this booking is confirmed. <br> Do <strong style="color:red;">not</strong> share this with anyone else.</p>
+
+              <h4 class="sc-title mt-3">Getting In</h4>
+              <p v-if="address.instructions" class="sc-instructions">
+                {{ address.instructions }}
+              </p>
+
+
+              <p class="sc-hint mt-2 mb-0">Shared with you because this booking is confirmed. <br> Do <strong class="text-danger">not</strong> share this with anyone else.</p>
             </template>
 
             <p v-else class="sc-hint mb-0">The owner hasn't added an address yet.</p>
@@ -364,6 +372,12 @@ watch(status, async (s) => {
   background: #2b2420;
   color: #fff;
   border-bottom: 4px solid var(--bk);        
+}
+.sc-instructions {
+  margin: 0 0 0.6rem;
+  color: #2b2420;
+  white-space: pre-line;         
+  overflow-wrap: anywhere;        
 }
 .sc-who {
   display: flex;
@@ -638,5 +652,32 @@ fieldset:disabled .photo-slot {
   color: #2b2420;
   white-space: pre-line;    
   overflow-wrap: anywhere;
+}
+@media (max-width: 767.98px) {
+  .sc-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.9rem 1rem;
+    position: relative;
+  }
+  .sc-who {
+    width: 100%;
+  }
+  .sc-meta {
+    flex: none;
+    width: 100%;
+    gap: 0.4rem;
+  }
+  .sc-status {
+    position: static;
+    align-self: flex-start;
+  }
+  .sc-who__text {
+    padding-right: 0;
+  }
+  .sc-body {
+    padding: 0.9rem 1rem 1rem;
+  }
 }
 </style>

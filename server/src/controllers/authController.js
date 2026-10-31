@@ -101,7 +101,7 @@ export const me = async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ message: "Not logged in" });
     }
-  const user = await User.findById(req.session.userId).select('-password +ownerProfile.address +sitterProfile.address')  
+  const user = await User.findById(req.session.userId).select('-password +ownerProfile.address +ownerProfile.instructions +sitterProfile.address')  
   // res.json({ id: user._id, username: user.username, role: user.role, bio: user.bio });
   // if (!user){
   //   return res.status(401).json({ message: "Not logged in" });

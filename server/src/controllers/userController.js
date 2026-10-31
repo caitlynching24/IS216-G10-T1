@@ -9,7 +9,7 @@ import { computeBadges } from '../utils/sitterBadges.js'
 
 const PUBLIC_FIELDS =
   'username bio profilePicture role createdAt ' +
-  'ownerProfile.servicesNeeded ' +
+  'ownerProfile.servicesNeeded ownerProfile.instructions ' +
   'sitterProfile.experienceStart sitterProfile.petTypes ' +
   'sitterProfile.services sitterProfile.serviceArea sitterProfile.ratingAvg sitterProfile.ratingCount ' +
   'sitterProfile.gallery'
@@ -150,6 +150,9 @@ export async function updateMyProfile(req, res) {
   if (req.session.role === 'owner' && Array.isArray(req.body.servicesNeeded)) {
     updates['ownerProfile.servicesNeeded'] = req.body.servicesNeeded.filter((s) => services.includes(s))
   }
+  if (req.session.role === 'owner' && typeof req.body.instructions === 'string') {
+    updates['ownerProfile.instructions'] = req.body.instructions.trim().slice(0, 300)
+  }
 
   if (req.session.role === 'sitter' && req.body.sitterProfile) {
     const sp = req.body.sitterProfile
@@ -171,7 +174,7 @@ export async function updateMyProfile(req, res) {
     const user = await User.findByIdAndUpdate(req.session.userId, updates, {
       new: true,
       runValidators: true
-    }).select('+ownerProfile.address +sitterProfile.address')
+      }).select('+ownerProfile.address +ownerProfile.instructions +sitterProfile.address')
 
     req.session.username = user.username
     res.json(user)

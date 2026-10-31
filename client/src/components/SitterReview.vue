@@ -191,7 +191,7 @@ watch([ratingFilter, commentsOnly, sortBy], () => {
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="r in pagedReviews" :key="r._id" class="sr-row" :class="{ 'sr-row--low': r.rating <= 2 }">
+                <tr v-for="r in pagedReviews" :key="r._id" class="sr-row">
                   <td class="sr-td sr-td--by">
                     <div class="sr-by">
                       <span class="sr-avatar" aria-hidden="true">
@@ -260,12 +260,6 @@ watch([ratingFilter, commentsOnly, sortBy], () => {
   .sr-layout {
     grid-template-columns: 1fr;
     gap: 1.25rem;
-  }
-  .sr-row--low {
-    box-shadow: inset 3px 0 0 #d9826b;
-  }
-  .sr-row--low .sr-td--by {
-    box-shadow: none;
   }
 }
 
@@ -339,12 +333,6 @@ watch([ratingFilter, commentsOnly, sortBy], () => {
 .sr-row {
   border-top: 1px solid #ede3d8;
 }
-.sr-row--low {
-  background: #fff8f7;
-}
-.sr-row--low .sr-td--by {
-  box-shadow: inset 3px 0 0 #d9826b;
-}
 .sr-td {
   padding: 0.85rem 0.5rem;
   vertical-align: middle;
@@ -405,5 +393,59 @@ watch([ratingFilter, commentsOnly, sortBy], () => {
   outline: 2px solid #c44f1c;
   outline-offset: 2px;
   border-radius: 4px;
+}
+@media (max-width: 767.98px) {
+  .data-table-wrap {
+    position: relative;
+    padding: 0 0.75rem;
+  }
+
+  .sr-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .sr-table,
+  .sr-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .sr-table .sr-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'by date'
+      'rating rating'
+      'comment comment';
+    gap: 0.35rem 0.75rem;
+    align-items: center;
+    padding: 0.85rem 0.25rem;
+  }
+  .sr-table .sr-row:first-child {
+    border-top: 0;
+  }
+
+  .sr-table .sr-td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+  }
+  .sr-table .sr-td--by {
+    grid-area: by;
+  }
+  .sr-table .sr-td--date {
+    grid-area: date;
+  }
+  .sr-table .sr-td--rating {
+    grid-area: rating;
+  }
+  .sr-table .sr-td--comment {
+    grid-area: comment;
+  }
 }
 </style>

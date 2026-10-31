@@ -48,6 +48,7 @@ function toTitleCase(s) {
 const form = ref({
   username: '',
   bio: '',
+  instructions: '',
   sitterProfile: {
     experienceStart: '',
     serviceArea: '',
@@ -62,10 +63,10 @@ let hadAddress = false
 
 function fillForm(user) {
   const sp = user.sitterProfile || {}
-  const addr = user.ownerProfile?.address || {}
   form.value = {
     username: user.username || '',
     bio: user.bio || '',
+    instructions: user.ownerProfile?.instructions || '',
     sitterProfile: {
       experienceStart: sp.experienceStart ? sp.experienceStart.slice(0, 7) : '',
       serviceArea: sp.serviceArea?.label || '',
@@ -193,6 +194,7 @@ async function save() {
     }
     if (isOwner.value) {
       payload.servicesNeeded = [...form.value.servicesNeeded]
+      payload.instructions = form.value.instructions
     }
 
     currentUser.value = await usersApi.updateMe(payload)
@@ -261,7 +263,12 @@ async function save() {
             </template>
             <template v-if="isOwner">
               <label class="form-label mt-2" for="unit">Unit number</label>
-              <input id="unit" v-model="unit" class="form-control" placeholder="#05-123" maxlength="20" />
+              <input id="unit" v-model="unit" class="form-control mb-2" placeholder="#05-123" maxlength="20" />
+            </template>
+            <template v-if="isOwner">
+              <label class="form-label mt-2" for="instr">Instructions to get in</label>
+              <textarea id="instr" v-model="form.instructions" class="form-control" rows="3" maxlength="300"
+                        placeholder="e.g. Door code 1234"></textarea>
             </template>
           </section>
         </div>
@@ -395,7 +402,10 @@ async function save() {
 </template>
 
 <style scoped>
-
+.sc-instructions {
+  white-space: pre-line;        
+  overflow-wrap: anywhere;      
+}
 .eg-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
