@@ -73,9 +73,11 @@ onMounted(async () => {
 <style scoped>
 .rec-card {
   background: #fff;
-  border: 1px solid #ede3d8;
+  border: 1px solid rgba(196, 119, 86, 0.3);
+  border-top: 4px solid #e6d3c0;    
   border-radius: 10px;
   padding: 10px 12px;
+  box-shadow: 0 6px 16px rgba(120, 70, 40, 0.1);
 }
 .rec-card:hover {
   border-color: #c44f1c;

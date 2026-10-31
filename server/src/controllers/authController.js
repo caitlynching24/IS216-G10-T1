@@ -16,6 +16,16 @@ export const postSignup = async (req, res) => {
         errors.push("Must be a valid email.");
     }
 
+    const existingUser = await User.getUserByEmail(cleanEmail);
+    if (existingUser) {
+        errors.push("Email is already registered."); 
+    }
+
+    const existingUser2 = await User.getUserByUsername(username);
+    if (existingUser2) {
+        errors.push("Username is already registered."); 
+    }
+
     if (password !== confirmPassword) {
         errors.push("Passwords do not match.");
     }
@@ -31,16 +41,6 @@ export const postSignup = async (req, res) => {
 
     if (!/[A-Z]/.test(password)) {
       errors.push('Password must contain at least 1 uppercase letter.')
-    }
-
-    const existingUser = await User.getUserByEmail(cleanEmail);
-    if (existingUser) {
-        errors.push("Email is already registered."); 
-    }
-
-    const existingUser2 = await User.getUserByUsername(username);
-    if (existingUser2) {
-        errors.push("Username is already registered."); 
     }
 
     if (errors.length > 0) {

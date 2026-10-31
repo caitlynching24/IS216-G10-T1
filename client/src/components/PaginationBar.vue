@@ -28,14 +28,19 @@ const pageNumbers = computed(() => {
   const nums = [...new Set([1, last, cur - 1, cur, cur + 1])]
     .filter((n) => n >= 1 && n <= last)
     .sort((a, b) => a - b)
-  const out = []
-  nums.forEach((n, i) => {
-    if (i > 0 && n - nums[i - 1] > 1) {
-      out.push('…')
-    }
-    out.push(n)
-  })
-  return out
+    const out = []
+    nums.forEach((n, i) => {
+      if (i > 0) {
+        const gap = n - nums[i - 1]
+        if (gap === 2) {
+          out.push(n - 1)          
+        } else if (gap > 2) {
+          out.push('…')
+        }
+      }
+      out.push(n)
+    })
+    return out
 })
 </script>
 

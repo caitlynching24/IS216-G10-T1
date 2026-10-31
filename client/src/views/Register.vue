@@ -34,7 +34,9 @@ async function submit() {
     <h1 class="landing-title landing-title--form">Create account</h1>
 
     <div v-if="errors.length" class="alert alert-danger">
-      <div v-for="e in errors" :key="e">{{ e }}</div>
+      <ul v-for="e in errors" :key="e" class="mb-0">
+        <li>{{ e }}</li>
+      </ul>
     </div>
 
     <form @submit.prevent="submit">

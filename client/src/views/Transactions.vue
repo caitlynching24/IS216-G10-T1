@@ -3,12 +3,17 @@
 // Rows come from 2 places:
 //  - payment records: successful or rejected card attempts
 //  - completed bookings the owner hasn't paid yet: shown as "pending"
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { paymentsApi } from '../services/paymentApi.js'
 import { bookingsApi } from '../services/bookingApi.js'
 import { currentUser, fetchUser } from '../services/auth.js'
 import BookingTabs from '../components/BookingTabs.vue'
 import { formatDateRange, formatPrice } from '../utils/bookingHelpers.js'
+import { usePagination } from '../utils/usePagination.js'
+import PaginationBar from '../components/PaginationBar.vue'
+
+const PAGE_SIZE = 5
+const tableEl = ref(null)
 
 const FILTERS = [
   { key: 'all', label: 'All' },
@@ -98,6 +103,13 @@ async function loadTransactions() {
   }
 }
 
+const { page, pageItems, goPage, reset } = usePagination(visibleRows, {
+  pageSize: PAGE_SIZE,
+  scrollRef: tableEl
+})
+
+watch(activeFilter, reset)
+
 onMounted(loadTransactions)
 </script>
 
@@ -141,42 +153,48 @@ onMounted(loadTransactions)
 
       <p v-if="!visibleRows.length" class="text-muted text-center py-5">No transactions here yet 🐾</p>
 
-      <div v-else class="table-responsive tx-table">
-        <table class="table align-middle mb-0">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Owner</th>
-              <th class="d-none d-md-table-cell">Session</th>
-              <th class="text-end">Amount</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="r in visibleRows" :key="r.key">
-              <td class="text-nowrap">{{ shortDate(r.date) }}</td>
-              <td>
-                <div class="fw-semibold">{{ r.owner }}</div>
-                <div class="small text-muted">{{ r.pets }}</div>
-              </td>
-              <td class="d-none d-md-table-cell small">{{ r.session }}</td>
-              <td class="text-end text-nowrap">
-                <div class="fw-semibold">{{ formatPrice(r.amount) }}</div>
-                <div class="small text-muted">{{ r.method }}</div>
-              </td>
-              <td><span class="tx-pill" :class="`tx-${r.status}`">{{ STATUS_LABELS[r.status] }}</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <template v-else>
+        <div ref="tableEl" class="table-responsive tx-table">
+          <table class="table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Owner</th>
+                <th class="d-none d-md-table-cell">Session</th>
+                <th class="text-end">Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="r in pageItems" :key="r.key">
+                <td class="text-nowrap">{{ shortDate(r.date) }}</td>
+                <td>
+                  <div class="fw-semibold">{{ r.owner }}</div>
+                  <div class="small text-muted">{{ r.pets }}</div>
+                </td>
+                <td class="d-none d-md-table-cell small">{{ r.session }}</td>
+                <td class="text-end text-nowrap">
+                  <div class="fw-semibold">{{ formatPrice(r.amount) }}</div>
+                  <div class="small text-muted">{{ r.method }}</div>
+                </td>
+                <td><span class="tx-pill" :class="`tx-${r.status}`">{{ STATUS_LABELS[r.status] }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <PaginationBar :page="page" :total="visibleRows.length" :page-size="PAGE_SIZE" @change="goPage" />
+        </div>
+      </template>
     </template>
   </div>
 </template>
 
 <style scoped>
 .tile {
-  border: 1px solid #ede3d8;
-  border-radius: 12px;
+  border: 1px solid rgba(196, 119, 86, 0.3);
+  border-top: 4px solid #e6d3c0;    
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(120, 70, 40, 0.1)
 }
 .text-earned { color: #1f7a53; }
 .text-awaiting { color: #8a5a14; }

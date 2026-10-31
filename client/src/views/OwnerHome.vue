@@ -11,7 +11,8 @@ import DistanceFilter from "../components/DistanceFilter.vue";
 import DateRangeFilter from "../components/DateRangeFilter.vue";
 import RecommendedSitters from "../components/RecommendedSitters.vue";
 import AdditionalFilters from "../components/AdditionalFilters.vue";
-
+import { usePagination } from '../utils/usePagination.js'
+import PaginationBar from '../components/PaginationBar.vue'
 
 const URL = 'http://localhost:5000'
 const profilePic = computed(() => currentUser.value?.profilePicture?.url || "")
@@ -35,6 +36,9 @@ watch(showMapModal, open => {
   if (open) window.addEventListener('keydown', onEsc)
   else window.removeEventListener('keydown', onEsc)
 })
+
+const PAGE_SIZE = 6
+const listEl = ref(null)
 
 //search rating
 const userRating = ref(0) //initial rating value
@@ -280,6 +284,16 @@ function sortByDistance(list) {
   return [...list].sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
 }
 
+const { page, pageItems: pagedSitters, goPage, reset } = usePagination(searchResults, {
+  pageSize: PAGE_SIZE,
+  scrollRef: listEl
+})
+
+watch(
+  [searchKey, selectedPets, otherPets, userRating, origin, maxDistanceKm, availableFrom, availableTo],
+  reset,
+  { deep: true }
+)
 
 onMounted(()=>{
   mq = window.matchMedia('(min-width: 992px)')
@@ -357,13 +371,14 @@ onBeforeUnmount(() => {
             </button>
           </div>
 
-          <div class="row">
-            <div class="col-12 mb-3" v-for="sitter in searchResults" :key="sitter._id">
+          <div ref="listEl" class="row">
+            <div class="col-12 mb-3" v-for="sitter in pagedSitters" :key="sitter._id">
               <SitterProfileCard :sitter="sitter">
                 <router-link :to="`/users/${sitter._id}`" class="btn btn-outline-danger rounded col-12 fw-semibold bg-light mt-3">View Profile</router-link>
               </SitterProfileCard>
             </div>
           </div>
+          <PaginationBar :page="page" :total="searchResults.length" :page-size="PAGE_SIZE" @change="goPage" />
         </div>
 
         <!-- map: right column at lg only -->

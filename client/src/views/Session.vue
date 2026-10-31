@@ -3,10 +3,15 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { currentUser } from '../services/auth.js'
 import { visitsApi } from '../services/api.js'
 import SessionCard from '../components/SessionCard.vue'
+import { usePagination } from '../utils/usePagination.js'
+import PaginationBar from '../components/PaginationBar.vue'
 
 const data = ref(null) 
 const loading = ref(true)
 const error = ref('')
+
+const PAGE_SIZE = 1
+const listEl = ref(null)
 
 const isSitter = computed(() => currentUser.value?.role === 'sitter')
 
@@ -32,6 +37,13 @@ async function load(quiet = false) {
     loading.value = false
   }
 }
+
+const allSessions = computed(() => data.value?.sessions ?? [])
+
+const { page, pageItems: pagedSessions, goPage } = usePagination(allSessions, {
+  pageSize: PAGE_SIZE,
+  scrollRef: listEl
+})
 
 // the owner's page refreshes itself while a sitter works
 let timer = null
@@ -65,9 +77,12 @@ onBeforeUnmount(() => clearInterval(timer))
       <p class="small mb-0">Paid bookings that are happening today will show up here.</p>
     </div>
 
-    <div v-else>
-      <SessionCard v-for="(s, i) in data.sessions" :key="s.booking._id" :session="s"
-                  :today="data.today" :is-sitter="isSitter" :index="i" class="mb-4" />
+    <div v-else ref="listEl">
+      <SessionCard v-for="(s, i) in pagedSessions" :key="s.booking._id" :session="s"
+                  :today="data.today" :is-sitter="isSitter"
+                  :index="(page - 1) * PAGE_SIZE + i" class="mb-4" />
+
+      <PaginationBar :page="page" :total="allSessions.length" :page-size="PAGE_SIZE" @change="goPage" />
     </div>
   </div>
 </template>

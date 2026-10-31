@@ -91,9 +91,14 @@ function countFor(item) {
   return visit.value.completedTasks.filter((t) => String(t.task) === String(item._id)).length
 }
 
+function canToggle(item, n) {
+  const c = countFor(item)
+  return n === c + 1 || n === c
+}
+
 async function tick(item, n, event) {
   const current = countFor(item)
-  if (!props.isSitter || !isActive.value || savingTask.value) {
+  if (!props.isSitter || !isActive.value || savingTask.value || !canToggle(item, n)) {
     event.target.checked = n <= current
     return
   }
@@ -274,10 +279,10 @@ watch(status, async (s) => {
 
               <a :href="mapsUrl" target="_blank" rel="noopener" class="sc-link">Open in Google Maps</a>
 
-              <h4 class="sc-title mt-3">Getting In</h4>
-              <p v-if="address.instructions" class="sc-instructions">
-                {{ address.instructions }}
-              </p>
+              <template v-if="address.instructions">
+                <h4 class="sc-title mt-3">Getting in</h4>
+                <p class="sc-instructions">{{ address.instructions }}</p>
+              </template>
 
 
               <p class="sc-hint mt-2 mb-0">Shared with you because this booking is confirmed. <br> Do <strong class="text-danger">not</strong> share this with anyone else.</p>
@@ -310,16 +315,16 @@ watch(status, async (s) => {
             <p v-if="!session.items.length" class="sc-hint mb-0">No care checklist was added to this booking.</p>
             <div v-else class="sc-tasks">
               <div v-for="item in session.items" :key="item._id" class="sc-task">
-                <div class="d-flex gap-1">
+                <div class="sc-task__boxes">
                   <!-- walk tasks: the boxes only show progress; they're ticked by finishing a walk -->
                   <input v-for="n in item.dailyFrequency" :key="n" type="checkbox"
                          class="form-check-input mt-0 task-check"
                          :checked="n <= countFor(item)"
-                         :disabled="isWalkTask(item) || !isSitter || !isActive || savingTask"
+                         :disabled="!isSitter || !isActive || savingTask || !canToggle(item, n)"
                          :aria-label="isWalkTask(item) ? `Walk ${n}, ticked when the walk ends` : undefined"
                          @change="tick(item, n, $event)" />
                 </div>
-                <div class="flex-grow-1">
+                <div class="sc-task__main">
                   <span class="sc-task__title"
                         :class="{ 'sc-task__title--done': countFor(item) >= item.dailyFrequency }">{{ item.title }}</span>
                   <template v-if="isWalkTask(item)">
@@ -331,11 +336,11 @@ watch(status, async (s) => {
                     </small>
                   </template>
                 </div>
-                <small v-if="item.dailyFrequency > 1" class="text-muted">
+                <small v-if="item.dailyFrequency > 1" class="sc-task__count">
                   {{ countFor(item) }}/{{ item.dailyFrequency }}
                 </small>
                 <button v-if="isWalkTask(item) && isSitter && isActive && countFor(item) < item.dailyFrequency"
-                        type="button" class="sc-btn sc-btn--small" :disabled="startingWalk === item._id"
+                        type="button" class="sc-btn sc-btn--small sc-task__walk" :disabled="startingWalk === item._id"
                         @click="startWalk(item)">
                   {{ startingWalk === item._id ? 'Opening…' : 'Start walk' }}
                 </button>
@@ -345,7 +350,7 @@ watch(status, async (s) => {
 
           <!-- completion report -->
           <section class="sc-card">
-            <h4 class="sc-title">Visit report</h4>
+            <h4 class="sc-title">{{ isSitter ? 'Visit Report (Complete only at the end)' : 'Visit Report' }}</h4>
 
             <template v-if="isCompleted">
               <p class="text-break" style="white-space: pre-line">{{ visit.report.notes }}</p>
@@ -472,7 +477,6 @@ watch(status, async (s) => {
 }
 .sc-name {
   color: #fff;
-  font-family: var(--font-heading, 'Trirong', Georgia, serif);
   font-size: 1.15rem;
   font-weight: 700;
   text-decoration: none;
@@ -529,6 +533,7 @@ watch(status, async (s) => {
 }
 
 .sc-card {
+  min-width: 0;                  
   padding: 1.1rem 1.2rem;
   border: 1px solid rgba(43, 36, 32, 0.08);
   border-radius: 14px;
@@ -543,6 +548,7 @@ watch(status, async (s) => {
 }
 .sc-card__head {
   display: flex;
+  flex-wrap: wrap;               
   align-items: baseline;
   justify-content: space-between;
   gap: 0.5rem;
@@ -623,12 +629,6 @@ watch(status, async (s) => {
   border-radius: 999px;
   background: var(--bk);
   transition: width 0.4s ease;
-}
-.sc-task {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.55rem 0;
 }
 .sc-task + .sc-task {
   border-top: 1px solid #f0e3d4;
@@ -721,31 +721,82 @@ fieldset:disabled .photo-slot {
   white-space: pre-line;    
   overflow-wrap: anywhere;
 }
+
+.sc-task {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.4rem 0.75rem;
+  padding: 0.55rem 0;
+}
+.sc-task__boxes {
+  display: flex;
+  flex: none;
+  gap: 0.35rem;
+  padding-top: 0.2rem;
+}
+.sc-task__main {
+  flex: 1 1 9rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.sc-task__count {
+  flex: none;
+  padding-top: 0.2rem;
+  color: #5c524b;
+}
+
 @media (max-width: 767.98px) {
   .sc-head {
+    position: relative;
     flex-direction: column;
     align-items: flex-start;
     gap: 0.6rem;
-    padding: 0.9rem 1rem;
-    position: relative;
+    padding: 0.9rem 1rem 3rem;
   }
-  .sc-who {
+  .sc-who,
+  .sc-meta {
     width: 100%;
   }
   .sc-meta {
     flex: none;
-    width: 100%;
-    gap: 0.4rem;
-  }
-  .sc-status {
-    position: static;
-    align-self: flex-start;
   }
   .sc-who__text {
-    padding-right: 0;
+    padding-right: 0;        
+  }
+  .sc-status {
+    position: absolute;
+    bottom: 0.9rem;
+    right: 1rem;
+    top: auto;
+    margin: 0;
   }
   .sc-body {
     padding: 0.9rem 1rem 1rem;
+  }
+}
+/* phones */
+@media (max-width: 575.98px) {
+  .sc-body {
+    padding: 0.75rem 0.75rem 1rem;
+  }
+  .sc-card {
+    padding: 0.9rem 1rem;
+  }
+  .sc-title {
+    font-size: 1.05rem;
+  }
+  .sc-task__walk {
+    flex: 1 1 100%;              
+    padding: 0.55rem 0.9rem;
+  }
+  .form-check-input.task-check {
+    width: 1.4rem;                  
+    height: 1.4rem;
+  }
+  .sc-link {
+    display: inline-block;
+    padding: 0.35rem 0;
   }
 }
 </style>

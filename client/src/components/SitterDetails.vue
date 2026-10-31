@@ -38,8 +38,6 @@ function stars(n) {
   return '★'.repeat(full) + '☆'.repeat(5 - full)
 }
 
-const hasDetails = computed(() => !!(sp.value.petTypes?.length || sp.value.services?.length))
-
 const sitterStats = computed(() => [
   ratingCount.value
     ? {
@@ -66,11 +64,16 @@ const sitterStats = computed(() => [
   }
 ])
 
+// to check if they are ready to be listed on an owner's home page
+const isListed = computed(() =>
+  !!(sp.value.serviceArea?.label && sp.value.services?.length && sp.value.petTypes?.length)
+)
+
 </script>
 
 <template>
   <div class="sd">
-    <div v-if="editable && !hasDetails" class="sd-nudge">
+    <div v-if="editable && !isListed" class="sd-nudge">
       <p class="mb-2">Owners can’t find you yet. Add your experience, the pets you look after and your services.</p>
       <router-link to="/editProfile" class="btn btn-sm text-white" style="background-color:#a85a38;">
         Add your details

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch, nextTick } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { usersApi } from '../services/api.js'
 import { usePagination } from '../utils/usePagination.js'
 import PaginationBar from './PaginationBar.vue'
@@ -122,7 +122,6 @@ watch(ratingFilter, (r) => {
 watch([ratingFilter, commentsOnly, sortBy], () => {
   page.value = 1
 })
-
 
 </script>
 

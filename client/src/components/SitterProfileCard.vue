@@ -45,3 +45,14 @@ const isNewSitter = computed(() => {
     </div>
 
 </template>
+
+<style scoped>
+.card {
+  margin-top: 1rem;
+  border: 1px solid rgba(196, 119, 86, 0.3);
+  border-top: 4px solid #e6d3c0;    
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(120, 70, 40, 0.1);
+}
+</style>
