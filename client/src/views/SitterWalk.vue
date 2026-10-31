@@ -30,7 +30,9 @@ let backOnRouteTimer = null
 const { position, path, accuracy, error: gpsError, start: startGps, startRecording, stopRecording } = useGeoTracker()
 
 const home = computed(() => walk.value?.home.coordinates ?? null)
-const plannedRoute = computed(() => walk.value?.plannedPath.coordinates ?? [])
+// 'instructions' walks have no route: no dashed line, and no going-off-route checks
+const hasRoute = computed(() => walk.value?.mode !== 'instructions')
+const plannedRoute = computed(() => walk.value?.plannedPath?.coordinates ?? [])
 
 const { metresFromHome, nearHome, hasLeftHome, resetLeftHome } = useHomeCheck(position, home)
 
@@ -144,7 +146,7 @@ onMounted(async () => {
   if (isWalking.value) {
     resumed.value = true
     startRecording()
-    deviation.start()
+    if (hasRoute.value) deviation.start()
     hasLeftHome.value = true   // they've been out walking, so coming home should allow ending the walk
   }
 })
@@ -157,7 +159,7 @@ async function startWalk() {
     walk.value = await walkApi.start(walkId, position.value)
     resetLeftHome()
     startRecording()
-    deviation.start()
+    if (hasRoute.value) deviation.start()
   } catch (err) {
     actionError.value = err.response?.data?.message ?? 'Could not start the walk. Please try again.'
   } finally {
@@ -206,11 +208,21 @@ async function endWalkEarly() {
 <template>
   <div class="d-flex flex-column vh-100 p-3 gap-3">
     <header>
-      <h1 class="page-title mb-1">{{ walk ? walk.routeName : 'Walk' }}</h1>
+      <h1 class="page-title mb-1">{{ walk?.routeName || 'Walk' }}</h1>
       <p class="text-body-secondary mb-0">
-        Follow the dashed route. Start and finish within {{ HOME_RADIUS_M }} m of the owner's home.
+        {{ hasRoute ? 'Follow the dashed route.' : "No set route: follow the owner's instructions." }}
+        Start and finish within {{ HOME_RADIUS_M }} m of the owner's home.
       </p>
     </header>
+
+    <!-- The walk task's text from the owner. For an 'instructions' walk this is the whole plan. -->
+    <div v-if="walk?.instructions" class="info-card">
+      <div class="section-label">Owner's instructions</div>
+      <div>{{ walk.instructions }}</div>
+      <div v-if="!hasRoute" class="small text-body-secondary mt-1">
+        This walk is tracked, but not checked against a route.
+      </div>
+    </div>
 
     <p v-if="status === 'loading' && !loadError" class="text-body-secondary mb-0">Loading walk…</p>
     <div v-if="loadError" class="alert alert-danger mb-0">{{ loadError }}</div>
@@ -245,7 +257,7 @@ async function endWalkEarly() {
             <div class="section-label">From home</div>
             <div class="stat">{{ metresFromHome === null ? 'Locating…' : formatDistance(metresFromHome) }}</div>
           </div>
-          <div v-if="isWalking">
+          <div v-if="isWalking && hasRoute">
             <div class="section-label">From route</div>
             <div class="stat">{{ deviation.metresOffRoute.value === null ? '–' : `${deviation.metresOffRoute.value} m` }}</div>
           </div>
@@ -277,13 +289,19 @@ async function endWalkEarly() {
             <div class="section-label">Time</div>
             <div class="stat">{{ formatDuration(walk.durationS) }}</div>
           </div>
-          <div>
-            <div class="section-label">Off route</div>
-            <div class="stat">{{ walk.deviations.length }} time{{ walk.deviations.length === 1 ? '' : 's' }}</div>
-          </div>
-          <div>
-            <div class="section-label">Owner alerted</div>
-            <div class="stat">{{ ownerAlertCount }} time{{ ownerAlertCount === 1 ? '' : 's' }}</div>
+          <template v-if="hasRoute">
+            <div>
+              <div class="section-label">Off route</div>
+              <div class="stat">{{ walk.deviations.length }} time{{ walk.deviations.length === 1 ? '' : 's' }}</div>
+            </div>
+            <div>
+              <div class="section-label">Owner alerted</div>
+              <div class="stat">{{ ownerAlertCount }} time{{ ownerAlertCount === 1 ? '' : 's' }}</div>
+            </div>
+          </template>
+          <div v-else>
+            <div class="section-label">Route check</div>
+            <div class="stat">Not checked</div>
           </div>
         </template>
 
@@ -297,6 +315,7 @@ async function endWalkEarly() {
               {{ busy ? 'Saving…' : 'End walk' }}
             </button>
           </template>
+          <router-link v-else-if="isFinished" to="/session" class="btn btn-primary">Back to session</router-link>
         </div>
       </div>
 
@@ -316,7 +335,9 @@ async function endWalkEarly() {
         <p v-else-if="isWalking && deviation.level.value === 'on-route'" class="text-body-secondary small mb-0">
           {{ hasLeftHome && nearHome
             ? "You're back at the owner's home. Press End walk to finish."
-            : `Walking… stay within ${WARN_M} m of the dashed route, then come back to the home to finish.` }}
+            : hasRoute
+              ? `Walking… stay within ${WARN_M} m of the dashed route, then come back to the home to finish.`
+              : 'Walking… come back to the home to finish.' }}
         </p>
       </template>
 

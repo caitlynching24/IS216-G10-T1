@@ -1,17 +1,20 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { currentUser } from '../services/auth.js'
+import { sendNotification } from '../utils/sendNotification.js'
 import { bookingsApi } from '../services/bookingApi.js'
 import BookingTable from '../components/BookingTable.vue'
 import BookingTabs from '../components/BookingTabs.vue'
 
-// /sitter/requests: every booking made with this sitter, sorted into Pending / Awaiting owner / Upcoming / Past tabs
-// (like the tabs on the owner's My Bookings)
+// /sitter/requests: every booking made with this sitter, sorted into
+// To accept / Awaiting confirmation / Upcoming / Awaiting payment / Past tabs (like the tabs on the owner's My Bookings)
 const TABS = [
-  { key: 'pending', label: 'Pending', statuses: ['pending'] },
-  { key: 'awaiting-owner', label: 'Awaiting owner', statuses: ['accepted'] }, // accepted, waiting for the owner to confirm
+  { key: 'pending', label: 'To accept', statuses: ['pending'] }, // new requests the sitter hasn't answered
+  { key: 'awaiting-confirmation', label: 'Awaiting confirmation', statuses: ['accepted'] }, // accepted, waiting for the owner to confirm
   { key: 'upcoming', label: 'Upcoming', statuses: ['confirmed', 'in-progress'] },
-  { key: 'past', label: 'Past', statuses: ['completed', 'paid', 'declined', 'cancelled', 'expired'] }
+  { key: 'awaiting-payment', label: 'Awaiting payment', statuses: ['completed'] }, // done, the owner hasn't paid yet
+  { key: 'past', label: 'Past', statuses: ['paid', 'declined', 'cancelled', 'expired'] }
 ]
 
 const route = useRoute()
@@ -65,6 +68,13 @@ async function respond(id, status) {
   try {
     const updated = await bookingsApi.updateStatus(id, status)
     booking.status = updated.status
+    sendNotification(
+      id,
+      status === 'accepted' ? 'booking-accepted' : 'booking-declined',
+      status === 'accepted'
+        ? `${currentUser.value.username} accepted your booking request. Confirm it to lock it in.`
+        : `${currentUser.value.username} declined your booking request.`
+    )
     message.value = status === 'accepted'
       ? 'Request accepted ✅ The hours are held for you while the owner confirms. It goes into your Google Calendar once confirmed.'
       : 'Request declined.'
@@ -87,6 +97,7 @@ async function cancelBooking(id) {
     const booking = bookings.value.find((b) => b._id === id)
     booking.status = updated.status
     booking.cancelledBy = updated.cancelledBy
+    sendNotification(id, 'booking-cancelled', `${currentUser.value.username} cancelled your booking. You can book another sitter.`)
     message.value = 'Booking cancelled. The hours are free on your calendar again.'
   } catch (err) {
     actionError.value = err.response?.data?.message || 'Could not cancel the booking.'

@@ -1,6 +1,6 @@
 <script setup>
-defineProps({ resultCount: { type: Number, default: 0 } })
-defineEmits(['clear'])
+defineProps({ resultCount: { type: Number, default: 0 }, activeFilters: {type:Array} })
+defineEmits(['clear', ])
 </script>
 
 <template>
@@ -10,6 +10,15 @@ defineEmits(['clear'])
         <div class="d-flex flex-column">
           <h2 class="offcanvas-title fs-5 fw-bold" id="filterTitle">Filters</h2>
           <small class="text-secondary">{{ resultCount }} sitters</small>
+          <div v-if="activeFilters.length" class="d-flex flex-wrap align-items-center gap-2 mb-2">
+          <button v-for="f in activeFilters" :key="f.key" type="button"
+                  class="btn btn-danger rounded-pill bg-light text-truncate"
+                  style="max-width: 100%;"
+                  :aria-label="`Remove filter: ${f.label}`" @click="f.clear">
+            {{ f.label }} <span aria-hidden="true">✕</span>
+          </button>
+          <button type="button" class="btn btn-link btn-sm" @click="$emit('clear')">Clear all</button>
+        </div>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#offcanvasBottom" aria-label="Close"></button>
       </div>
@@ -31,10 +40,11 @@ defineEmits(['clear'])
 .filter-footer { padding: .75rem 1rem; border-top: 1px solid #dee2e6; background: #fff; }
 
 /* md and up: sticky card that scrolls internally */
+
 @media (min-width: 768px) {
   .filter-wrap {
     position: sticky;
-    top: 9vh;
+    top: 7vh;
     max-height: calc(100vh - 7vh - 1rem);
     overflow-y: auto;
     background: #fff;

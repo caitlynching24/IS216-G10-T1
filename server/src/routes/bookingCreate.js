@@ -5,6 +5,7 @@ import Booking from '../models/bookingModel.js'
 import CareChecklist, { CATEGORIES } from '../models/CareChecklist.js'
 import Pet from '../models/petModel.js'
 import User from '../models/UserModel.js'
+import WalkRoute from '../models/walkRouteModel.js'
 import { requireOwner, requireLogin } from '../middleware/authMiddleware.js'
 import { bookingRange, findClash, describeBooking, toMinutes, slotsOf, slotsCover, START_TIME_RE, END_TIME_RE } from '../utils/bookingTimes.js'
 import asyncHandler from '../middleware/asyncHandler.js'
@@ -14,6 +15,24 @@ import { bookingPrice, nightsFor } from '../utils/servicePrices.js'
 const router = Router()
 
 const DAY_MS = 24 * 60 * 60 * 1000
+
+// Booking statuses where the sitter may see a walk task's route (i.e. the owner has confirmed the booking)
+const ROUTE_VISIBLE_STATUSES = ['confirmed', 'in-progress', 'completed', 'paid']
+
+// Works out the route for a walk task.
+// choice: the id of one of the owner's routes, or 'instructions' for "follow my instructions".
+// Returns { walkRoute } to save on the task, or { error } with a message for the owner.
+async function walkRouteFor(choice, ownerId) {
+  if (choice === 'instructions') return { walkRoute: { mode: 'instructions' } }
+  if (!mongoose.isValidObjectId(choice)) {
+    return { error: 'Choose a route for each walk task, or "follow my instructions".' }
+  }
+  const route = await WalkRoute.findOne({ _id: choice, owner: ownerId }) // must be this owner's own route
+  if (!route) return { error: 'That walking route was not found. It may have been deleted.' }
+  return {
+    walkRoute: { mode: 'route', route: route._id, name: route.name, path: route.path, distanceM: route.distanceM }
+  }
+}
 
 // Every 'YYYY-MM-DD' from start to end, inclusive.
 function daysBetween(start, end) {
@@ -103,7 +122,14 @@ router.post('/', requireOwner, asyncHandler(async (req, res) => {
     if (!taskPets.every((id) => bookingPetIds.includes(id))) {
       return res.status(400).json({ message: 'A care task can only be for a pet in this booking.' })
     }
-    items.push({ category: t.category, title, dailyFrequency: t.dailyFrequency, petIds: taskPets })
+    // Walk tasks need a route (copied from the owner's routes) or "follow my instructions"
+    let walkRoute
+    if (t.category === 'walk') {
+      const result = await walkRouteFor(t.walkRouteId, ownerId)
+      if (result.error) return res.status(400).json({ message: result.error })
+      walkRoute = result.walkRoute
+    }
+    items.push({ category: t.category, title, dailyFrequency: t.dailyFrequency, petIds: taskPets, walkRoute })
   }
 
   // 7. Overnight stay needs at least one night, so the booking must end on a later day than it starts
@@ -159,7 +185,19 @@ router.get('/:id/care-tasks', requireLogin, asyncHandler(async (req, res) => {
   }
 
   const checklist = await CareChecklist.findOne({ bookingId: booking._id })
-  res.json({ items: checklist ? checklist.items : [] })
+  const items = checklist ? checklist.items.map((item) => item.toObject()) : []
+
+  // The sitter only gets a walk route's path once the owner has confirmed the booking; before that, just its name
+  const isSitter = me === String(booking.sitterId)
+  if (isSitter && !ROUTE_VISIBLE_STATUSES.includes(booking.status)) {
+    for (const item of items) {
+      if (item.walkRoute?.path) {
+        delete item.walkRoute.path
+        item.walkRoute.hidden = true
+      }
+    }
+  }
+  res.json({ items })
 }))
 
 // GET /api/bookings/:id

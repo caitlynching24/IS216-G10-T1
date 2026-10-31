@@ -5,7 +5,7 @@ body {
   background-color: #fff9f4;
   font-family: var(--bs-body-font-family);
 }
-
+ 
 /* Nav bar*/
 .topbar {
   position: sticky;
@@ -20,8 +20,9 @@ body {
   letter-spacing: 0.01em;
   line-height: 1;
 }
-
+ 
 .topbar > .container-fluid {
+  position: relative;               /* anchors the desktop dropdown */
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
@@ -44,7 +45,7 @@ body {
   justify-self: end;
   margin: 0;
 }
-
+ 
 /* links */
 .topbar .navbar-nav .nav-link {
   padding: 0.5rem 0.85rem;
@@ -62,7 +63,7 @@ body {
   background: #a85a38;
   color: #fff;
 }
-
+ 
 /* profile */
 .nav-account {
   display: flex;
@@ -78,6 +79,7 @@ body {
   border-radius: 999px;
   background: transparent;
   color: #fff;
+  font: inherit;
   font-weight: 600;
   text-decoration: none;
   transition: background 0.2s, border-color 0.2s;
@@ -113,6 +115,23 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+ 
+/* Profile button on the bar (md and up) */
+.nav-user--toggle {
+  cursor: pointer;
+}
+.nav-user--toggle[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+.nav-user__caret {
+  font-size: 0.75rem;
+  transition: transform 0.2s;
+}
+.nav-user--toggle[aria-expanded="true"] .nav-user__caret {
+  transform: rotate(180deg);
+}
+ 
 .nav-btn {
   padding: 0.5rem 1.25rem;
   border: 0;
@@ -125,33 +144,104 @@ body {
   background: #8f4a2c;
   color: #fff;
 }
-
+ 
+.nav-action {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.nav-action .nav-btn { flex: 0 0 auto; }
+.nav-action .nav-user { min-width: 0; flex: 0 1 auto; }
+ 
+/* Below md the bar is too narrow for the profile button: it lives in the off-canvas only */
+@media (max-width: 767.98px) {
+  .nav-action {
+    gap: 0.5rem;
+  }
+}
+ 
+/* Between md and lg the profile button is just the avatar */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .nav-user--toggle {
+    padding: 0.2rem;
+  }
+}
+ 
+/* lg and up: Search Sitters on the left, everything else in a dropdown under the profile button */
 @media (min-width: 992px) {
   .topbar {
     padding-block: 0.65rem;
   }
-  .nav-menu {
-    display: contents;                 
-  }
-  .nav-backdrop {
-    display: none;
-  }
-  .nav-menu .navbar-nav {
+ 
+  .topbar .nav-search {
     grid-column: 1;
     grid-row: 1;
     justify-self: start;
     flex-direction: row;
+    margin: 0;
+  }
+ 
+  /* Invisible layer: clicking anywhere outside the dropdown closes it */
+  .nav-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1040;
+    background: transparent;
+  }
+ 
+  .nav-menu {
+    position: absolute;
+    top: 100%;
+    right: 1.25rem;
+    z-index: 1050;
+    display: none;
+    flex-direction: column;
+    min-width: 240px;
+    margin-top: 0.4rem;
+    padding: 0.5rem;
+    background-color: #2b2420;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    box-shadow: 0 0.75rem 1.75rem rgba(0, 0, 0, 0.3);
+  }
+  .nav-menu--open {
+    display: flex;
+  }
+  .nav-menu--guest {
+    display: none;
+  }
+ 
+  .topbar .nav-menu .navbar-nav {
+    flex-direction: column;
+    align-items: stretch;
     gap: 0.15rem;
     margin: 0;
   }
-  .nav-account {
-    grid-column: 3;
-    grid-row: 1;
-    justify-self: end;
-    margin: 0;
+  .topbar .nav-menu .nav-link {
+    border-radius: 10px;
+  }
+  .topbar .nav-menu .nav-link:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+ 
+  .nav-menu .nav-account {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .nav-menu .nav-account .btn {
+    width: 100%;
   }
 }
-
+ 
+/* Below lg: off-canvas from the left */
 @media (max-width: 991.98px) {
   .topbar .navbar-nav {
     gap: 0.25rem;
@@ -197,7 +287,14 @@ body {
     justify-content: flex-start;
   }
 }
-
+ 
+@media (prefers-reduced-motion: reduce) {
+  .nav-menu,
+  .nav-user__caret {
+    transition: none;
+  }
+}
+ 
 /* Pet cards */
 .pet-strip {
   display: flex;
@@ -208,27 +305,27 @@ body {
   -webkit-overflow-scrolling: touch;
   padding: 0.25rem 0.25rem 0.9rem;
 }
-
+ 
 .pet-strip__item {
   flex: 0 0 220px;         
   width: 220px;
   min-width: 220px;
   scroll-snap-align: start;
 }
-
+ 
 .pet-strip__item > * {
   width: 100%;
   max-width: 100%;
   flex: none;
   margin: 0;
 }
-
+ 
 @media (max-width: 575.98px) {
   .pet-strip__item {
     flex-basis: 70%;
   }
 }
-
+ 
 .landing-bg {
     position: fixed;
     inset: 0;
@@ -237,7 +334,7 @@ body {
     linear-gradient(90deg, rgba(88, 80, 76, 0.9) 0%, rgba(122, 113, 108, 0.62) 55%, rgba(43, 36, 32, 0.25) 100%),
         url('../assets/img/AuthPage.jpg') center / cover no-repeat;
 }
-
+ 
 .landing-title {
   font-family: var(--font-heading, 'Fraunces', Georgia, serif);
   font-weight: 700;
@@ -252,7 +349,7 @@ body {
   font-size: clamp(1.6rem, 2.6vw, 2.1rem);  
   margin-bottom: 0.5rem;
 }
-
+ 
 /* Profile */
 .pf-title {
   font-family: var(--font-heading, 'Fraunces', Georgia, serif);
@@ -286,18 +383,18 @@ body {
   outline: 2px solid #c44f1c;
   outline-offset: 2px;
 }
-
+ 
 /* gutters for the navbar, so Log out stops touching the edge */
 .topbar > .container-fluid {
   padding-inline: 1.25rem;
 }
-
+ 
 /* checkbox checked */
 .form-check-input.review-check:checked {
   background-color: #c47756;
   border-color: #c47756;
 }
-
+ 
 /* Orange brand buttons.*/
 .btn.btn-brand {
   --bs-btn-color: #fff;
@@ -314,7 +411,7 @@ body {
   --bs-btn-disabled-border-color: #c44f1c;
   --bs-btn-focus-shadow-rgb: 196, 79, 28;
 }
-
+ 
 .btn.btn-brand-light {
   --bs-btn-color: #fff;
   --bs-btn-bg: #c47756;
@@ -330,14 +427,14 @@ body {
   --bs-btn-disabled-border-color: #c47756;
   --bs-btn-focus-shadow-rgb: 196, 119, 86;
 }
-
+ 
 /* handling page widths */
 .pf, .br, .sesh, .ob, .trans, .oh, .sh, .pay, .ur, .noti {
   max-width: 1400px;
   margin-inline: auto;
   padding: 0.5rem 1.25rem 2.5rem;
 }
-
+ 
 /* tables (reviews, bookings, requests) */
 .data-table-wrap {
   background: #fff;

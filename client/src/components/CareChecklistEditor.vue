@@ -1,5 +1,6 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
+import { walkRoutesApi } from '../services/walkRouteApi.js'
 import { SERVICE_PRICES, SERVICE_LABELS, SERVICE_HINTS } from '../utils/servicePrices.js'
 
 // The care checklist part of the booking form: the owner adds tasks (feed, walk, medication...).
@@ -11,11 +12,26 @@ defineProps({
 const emit = defineEmits(['change'])
 
 const categories = Object.keys(SERVICE_PRICES) // same 6 types the server accepts (each has a fixed price)
-const tasks = ref([]) // each task: { category, title, dailyFrequency, petIds }
+const tasks = ref([]) // each task: { category, title, dailyFrequency, petIds, walkRouteId }
+
+// The owner's recorded walking routes, for the route dropdown on walk tasks
+const walkRoutes = ref([])
+const routesError = ref('')
+
+onMounted(async () => {
+  try {
+    walkRoutes.value = await walkRoutesApi.getMyRoutes()
+  } catch {
+    routesError.value = 'Could not load your walking routes.'
+  }
+})
+
+const formatDistance = (m) => (m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${m} m`)
 
 function addTask() {
   // petIds: [] means "all the selected pets"
-  tasks.value.push({ category: 'feed', title: '', dailyFrequency: 1, petIds: [] })
+  // walkRouteId (walk tasks only): a route's id, 'instructions', or '' (not chosen yet)
+  tasks.value.push({ category: 'feed', title: '', dailyFrequency: 1, petIds: [], walkRouteId: '' })
 }
 
 function removeTask(index) {
@@ -57,6 +73,23 @@ watch(tasks, () => emit('change', tasks.value), { deep: true })
       <div class="col-6 col-sm-2 text-end">
         <button type="button" class="btn btn-sm btn-outline-danger" @click="removeTask(i)">Remove</button>
       </div>
+    </div>
+    <!-- Walk tasks: which route the sitter should follow -->
+    <div v-if="task.category === 'walk'" class="mt-2">
+      <label class="form-label small mb-1" :for="`walk-route-${i}`">Route</label>
+      <select :id="`walk-route-${i}`" v-model="task.walkRouteId" class="form-select form-select-sm">
+        <option value="" disabled>Choose a route…</option>
+        <option v-for="r in walkRoutes" :key="r._id" :value="r._id">{{ r.name }} · {{ formatDistance(r.distanceM) }}</option>
+        <option value="instructions">No route – follow my instructions</option>
+      </select>
+      <p v-if="routesError" class="small text-danger mb-0 mt-1">{{ routesError }}</p>
+      <p v-else-if="walkRoutes.length === 0" class="small text-muted mb-0 mt-1">
+        You haven't recorded any routes yet.
+        <router-link to="/owner/routes/new" target="_blank">Record a route</router-link>, or choose "follow my instructions".
+      </p>
+      <p v-else-if="task.walkRouteId === 'instructions'" class="small text-muted mb-0 mt-1">
+        Put the instructions in "What to do". The walk is still tracked, but can't be checked against a route.
+      </p>
     </div>
     <!-- Only worth choosing pets when more than one is selected -->
     <div v-if="pets.length > 1" class="d-flex flex-wrap align-items-center gap-2 mt-2">

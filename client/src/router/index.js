@@ -16,8 +16,7 @@ import BookingDetail from '../views/BookingDetail.vue'
 import RecordRoute from '../views/RecordRoute.vue'
 import MyRoutes from '../views/MyRoutes.vue'
 import SitterWalk from '../views/SitterWalk.vue'
-import SitterWalkStart from '../views/SitterWalkStart.vue'
-import OwnerNotifications from '../views/OwnerNotifications.vue'
+import Notifications from '../views/Notifications.vue'
 import PaymentGateway from '../views/PaymentGateway.vue'
 import Transactions from '../views/Transactions.vue'
 
@@ -41,9 +40,8 @@ const routes = [
 { path: '/owner/routes', name: 'my-routes', component: MyRoutes, meta: { role: 'owner' } },
 { path: '/owner/routes/new', name: 'record-route', component: RecordRoute, meta: { role: 'owner' } },
 { path: '/owner/routes/:id/record', name: 'rerecord-route', component: RecordRoute, meta: { role: 'owner' } },
-{ path: '/sitter/walks/new', name: 'sitter-walk-start', component: SitterWalkStart, meta: { role: 'sitter' } }, // TEMP until booking integration
 { path: '/sitter/walks/:id', name: 'sitter-walk', component: SitterWalk, meta: { role: 'sitter' } },
-{ path: '/owner/notifications', name: 'owner-notifications', component: OwnerNotifications, meta: { role: 'owner' } },
+{ path: '/notifications', name: 'notifications', component: Notifications, meta: { auth:true } },
 ]
 
 // connects a url path to the vue page which shd be displayed, tgt with the components it needs 

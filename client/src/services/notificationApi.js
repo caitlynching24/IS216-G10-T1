@@ -27,5 +27,20 @@ export const notificationApi = {
   async markAllRead() {
     const res = await api.patch('/notifications/read-all')
     return res.data
+  },
+
+  async clearAll() {
+    const res = await api.delete('/notifications')
+    return res.data
+  },
+
+  async create(body) { 
+    const res = await api.post('/notifications', body)
+    return res.data
+  },
+
+  async notifyPayment(bookingId) {
+    const res = await api.post('/notifications/payment', { bookingId })
+    return res.data
   }
 }

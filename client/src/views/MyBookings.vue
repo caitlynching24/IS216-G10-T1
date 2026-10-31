@@ -4,6 +4,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { bookingsApi } from '../services/bookingApi.js'
+import { sendNotification } from '../utils/sendNotification.js'
 import { currentUser, fetchUser } from '../services/auth.js'
 import BookingTable from '../components/BookingTable.vue'
 import BookingTabs from '../components/BookingTabs.vue'
@@ -69,9 +70,11 @@ async function confirmBooking(id) {
   busyId.value = id
   message.value = ''
   actionError.value = ''
+  // prev confirmation status of confirmed booking 
   try {
     const updated = await bookingsApi.confirm(id)
     bookings.value.find((b) => b._id === id).status = updated.status
+    sendNotification(id, 'booking-confirmed', `${currentUser.value.username} confirmed your booking.`)
     message.value = 'Booking confirmed ✅ You can find it under Upcoming.'
   } catch (err) {
     actionError.value = err.response?.data?.message || 'Could not confirm the booking.'
@@ -82,6 +85,7 @@ async function confirmBooking(id) {
 
 async function cancelBooking(id) {
   const booking = bookings.value.find((b) => b._id === id)
+  const wasConfirmed = booking.status === 'confirmed'
   const question = booking.status === 'confirmed'
     ? 'Cancel this booking? The sitter will see it as cancelled. This cannot be undone.'
     : 'Withdraw this request? The sitter will see that you withdrew it. This cannot be undone.'
@@ -93,6 +97,13 @@ async function cancelBooking(id) {
     const updated = await bookingsApi.cancel(id)
     booking.status = updated.status
     booking.cancelledBy = updated.cancelledBy
+    sendNotification(
+      id,
+      'booking-cancelled',
+      wasConfirmed
+        ? `${currentUser.value.username} cancelled your booking.`
+        : `${currentUser.value.username} withdrew their booking request.`
+    )
     message.value = 'Done. You can find it under Past.'
   } catch (err) {
     actionError.value = err.response?.data?.message || 'Could not cancel the booking.'

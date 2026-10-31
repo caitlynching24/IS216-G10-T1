@@ -6,6 +6,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { bookingsApi } from '../services/bookingApi.js'
 import { paymentsApi } from '../services/paymentApi.js'
 import { currentUser } from '../services/auth.js'
+import { sendPaymentNotification } from '../utils/sendNotification.js'
 import { petNames, formatDateRange, formatPrice } from '../utils/bookingHelpers.js'
 import { SERVICE_PRICES, SERVICE_LABELS, OVERNIGHT_FEE, priceForTasks, nightsFor } from '../utils/servicePrices.js'
 
@@ -58,6 +59,7 @@ onMounted(async () => {
       // Back from Stripe after paying: check it really went through
       const result = await paymentsApi.confirm(sessionId)
       receipt.value = result.payment
+      sendPaymentNotification(route.params.id)   // owner: "Your payment of $X went through."
     } else if (cancelled) {
       // Back from Stripe without paying
       await paymentsApi.cancel(cancelled).catch(() => {}) // fine if it was already marked

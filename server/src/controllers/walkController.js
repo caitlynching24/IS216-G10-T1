@@ -1,7 +1,9 @@
 import mongoose from 'mongoose'
 import Walk from '../models/walkModel.js'
-import WalkRoute from '../models/walkRouteModel.js'
 import User from '../models/UserModel.js'
+import Booking from '../models/bookingModel.js'
+import CareChecklist from '../models/CareChecklist.js'
+import VisitSession from '../models/VisitSession.js'
 import { notify } from '../utils/notify.js'
 import { HOME_RADIUS_M, isValidPath, isValidPoint, metresBetween, pathLength } from '../utils/walkGeo.js'
 
@@ -18,6 +20,24 @@ async function loadSittersWalk(req, res) {
   }
   return walk
 }
+
+// Ticks the walk's task off in its session (one completed-task entry, linked to this walk),
+// so the session's progress and the care report include it. An ended-early walk counts too.
+// The walk is already saved, so a problem here is logged rather than failing the request.
+async function tickWalkTask(walk) {
+  if (!walk.visit || !walk.task) return // walks from before booking integration
+  try {
+    await VisitSession.updateOne(
+      { _id: walk.visit, status: 'active', 'completedTasks.walk': { $ne: walk._id } }, // never tick the same walk twice
+      { $push: { completedTasks: { task: walk.task, title: walk.instructions || 'Walk', walk: walk._id } } }
+    )
+  } catch (err) {
+    console.error('Could not tick off the walk task:', err.message)
+  }
+}
+
+// How a walk is named in notification messages
+const walkLabel = (walk) => (walk.mode === 'route' ? `the walk on "${walk.routeName}"` : 'the walk')
 
 // The deviation that's still going on (no endedAt yet), or undefined
 const currentDeviation = (walk) => walk.deviations.find((d) => !d.endedAt)
@@ -37,30 +57,66 @@ function closeWalk(walk, path, status) {
   if (current) current.endedAt = now
 }
 
-// POST /api/walks   body: { routeId, bookingId?, visitId?, taskId? }
-// Creates a 'ready' walk holding a copy of the route and the owner's home.
-// TEMP until booking integration: any logged-in sitter can create a walk on any route.
-// Later: only the booking's sitter, once the booking is confirmed, on the route attached to that booking.
+// POST /api/walks   body: { visitId, taskId }
+// Creates a 'ready' walk for one walk task in the sitter's active visit (today's session).
+// The route is the copy saved on the booking when it was made, so the owner editing or
+// deleting their route later doesn't change it. If a walk for this task is already
+// ready or under way, that one is sent back instead, so the sitter can carry on with it.
 export async function createWalk(req, res) {
-  const { routeId, bookingId = null, visitId = null, taskId = null } = req.body
-  if (!mongoose.isValidObjectId(routeId)) return res.status(400).json({ message: 'Choose a route.' })
+  const { visitId, taskId } = req.body
+  if (!mongoose.isValidObjectId(visitId) || !mongoose.isValidObjectId(taskId)) {
+    return res.status(400).json({ message: 'Choose a walk task from your session.' })
+  }
 
-  const route = await WalkRoute.findById(routeId)
-  if (!route) return res.status(404).json({ message: 'Route not found.' })
+  // 1. The visit is this sitter's, and it's going on now
+  const visit = await VisitSession.findOne({ _id: visitId, sitter: req.session.userId })
+  if (!visit) return res.status(404).json({ message: 'Session not found.' })
+  if (visit.status !== 'active') return res.status(400).json({ message: 'This session has ended.' })
 
-  const owner = await User.findById(route.owner).select('+ownerProfile.address')
+  // 2. The task is a walk task on this booking's care checklist
+  const booking = await Booking.findById(visit.booking)
+  const checklist = await CareChecklist.findOne({ bookingId: visit.booking })
+  const task = checklist?.items.id(taskId)
+  if (!booking || !task || task.category !== 'walk') {
+    return res.status(404).json({ message: 'Walk task not found.' })
+  }
+
+  // 3. A walk for this task already ready or under way: carry on with that one
+  const unfinished = await Walk.findOne({ visit: visit._id, task: task._id, status: { $in: ['ready', 'in-progress'] } })
+  if (unfinished) return res.json(unfinished)
+
+  // 4. Not more walks than the task asks for today (an ended-early walk still counts as one)
+  const done = await Walk.countDocuments({ visit: visit._id, task: task._id, status: { $in: ['completed', 'ended-early'] } })
+  if (done >= task.dailyFrequency) {
+    return res.status(400).json({ message: `All ${task.dailyFrequency} of today's walks for this task are done.` })
+  }
+
+  // 5. One walk at a time
+  const walking = await Walk.findOne({ sitter: req.session.userId, status: 'in-progress' })
+  if (walking) {
+    return res.status(409).json({ message: 'Finish the walk you are on before starting another.', walkId: walking._id })
+  }
+
+  const owner = await User.findById(booking.ownerId).select('+ownerProfile.address')
   const homeCoords = owner?.ownerProfile?.address?.location?.coordinates
   if (!homeCoords) return res.status(400).json({ message: "The owner hasn't set their home address." })
 
+  // A route walk needs the saved route. Anything else (including walk tasks from before routes
+  // could be chosen) is an 'instructions' walk: tracked, but not checked against a route.
+  const plan = task.walkRoute
+  const hasRoute = plan?.mode === 'route' && plan.path?.coordinates?.length >= 2
+
   const walk = await Walk.create({
-    owner: route.owner,
+    owner: booking.ownerId,
     sitter: req.session.userId,
-    booking: bookingId,
-    visit: visitId,
-    task: taskId,
-    route: route._id,
-    routeName: route.name,
-    plannedPath: route.path,
+    booking: booking._id,
+    visit: visit._id,
+    task: task._id,
+    mode: hasRoute ? 'route' : 'instructions',
+    instructions: task.title,
+    route: hasRoute ? plan.route : null,
+    routeName: hasRoute ? plan.name : '',
+    plannedPath: hasRoute ? plan.path : undefined,
     home: { type: 'Point', coordinates: homeCoords }
   })
   res.status(201).json(walk)
@@ -101,6 +157,7 @@ export async function reportDeviation(req, res) {
   const walk = await loadSittersWalk(req, res)
   if (!walk) return
   if (walk.status !== 'in-progress') return res.status(400).json({ message: 'This walk is not in progress.' })
+  if (walk.mode !== 'route') return res.status(400).json({ message: 'This walk has no route to go off.' })
 
   const { level, location, distanceM } = req.body
   if (!['warning', 'notify'].includes(level)) return res.status(400).json({ message: 'Unknown deviation level.' })
@@ -134,6 +191,7 @@ export async function reportBackOnRoute(req, res) {
   const walk = await loadSittersWalk(req, res)
   if (!walk) return
   if (walk.status !== 'in-progress') return res.status(400).json({ message: 'This walk is not in progress.' })
+  if (walk.mode !== 'route') return res.status(400).json({ message: 'This walk has no route to go off.' })
 
   const current = currentDeviation(walk)
   if (!current) return res.json(walk) // nothing to end
@@ -164,6 +222,7 @@ export async function finishWalk(req, res) {
 
   closeWalk(walk, path, 'completed')
   await walk.save()
+  await tickWalkTask(walk)
   res.json(walk)
 }
 
@@ -185,8 +244,9 @@ export async function endWalkEarly(req, res) {
   closeWalk(walk, path, 'ended-early')
   walk.endedEarlyReason = reason
   await walk.save()
+  await tickWalkTask(walk)
 
   await notify(walk.owner, 'walk-ended-early',
-    `${sitterName(req)} ended the walk on "${walk.routeName}" early: ${reason}`, walk._id)
+    `${sitterName(req)} ended ${walkLabel(walk)} early: ${reason}`, walk._id)
   res.json(walk)
 }

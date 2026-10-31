@@ -8,6 +8,7 @@ import { bookingsApi } from '../services/bookingApi.js'
 import { currentUser, fetchUser } from '../services/auth.js'
 import StatusPill from '../components/StatusPill.vue'
 import ShowStarRating from '../components/ShowStarRating.vue'
+import WalkMap from '../components/WalkMap.vue'
 import { formatDateRange, formatPrice } from '../utils/bookingHelpers.js'
 
 const route = useRoute()
@@ -58,6 +59,16 @@ function alsoFor(task) {
 function petKind(pet) {
   return [pet.species, pet.breed].filter(Boolean).join(' · ')
 }
+
+// Walk tasks: the route the owner chose (the sitter only gets the map once the booking is confirmed)
+function routeText(task) {
+  const r = task.walkRoute
+  if (!r || r.mode === 'instructions') return 'No set route: the sitter follows the instructions'
+  const km = r.distanceM >= 1000 ? `${(r.distanceM / 1000).toFixed(1)} km` : `${r.distanceM} m`
+  return `Route: ${r.name} · ${km}${r.hidden ? ' (map shown once the owner confirms)' : ''}`
+}
+const openRouteKey = ref(null) // which task's route map is open (one at a time)
+const routeKey = (task) => task._id || task.title
 
 const status = computed(() => booking.value?.status)
 // Which buttons to show:
@@ -215,15 +226,27 @@ onMounted(async () => {
           </span>
         </div>
         <p v-if="!visibleTasks.length" class="text-muted mb-0">No tasks added{{ pets.length > 1 && selectedPet ? ` for ${selectedPet.name}` : '' }}.</p>
-        <div v-for="(task, i) in visibleTasks" :key="i" class="form-check task-row d-flex align-items-center gap-2">
-          <input :id="`task-${i}`" class="form-check-input mt-0" type="checkbox" disabled />
-          <label class="form-check-label flex-grow-1" :for="`task-${i}`">
-            {{ task.title }}
-            <small v-if="pets.length > 1" class="d-block text-muted">
-              {{ alsoFor(task).length ? `Also for ${alsoFor(task).join(', ')}` : `Only for ${selectedPet?.name}` }}
-            </small>
-          </label>
-          <span v-if="task.dailyFrequency > 1" class="freq-badge">{{ task.dailyFrequency }} times a day</span>
+        <div v-for="(task, i) in visibleTasks" :key="i" class="task-row">
+          <div class="form-check d-flex align-items-center gap-2 mb-0 ps-0">
+            <input :id="`task-${i}`" class="form-check-input mt-0" type="checkbox" disabled />
+            <label class="form-check-label flex-grow-1" :for="`task-${i}`">
+              {{ task.title }}
+              <small v-if="pets.length > 1" class="d-block text-muted">
+                {{ alsoFor(task).length ? `Also for ${alsoFor(task).join(', ')}` : `Only for ${selectedPet?.name}` }}
+              </small>
+              <small v-if="task.category === 'walk'" class="d-block text-muted">{{ routeText(task) }}</small>
+            </label>
+            <span v-if="task.dailyFrequency > 1" class="freq-badge">{{ task.dailyFrequency }} times a day</span>
+          </div>
+          <!-- the route map, when this viewer is allowed to see the path -->
+          <template v-if="task.walkRoute?.path">
+            <button type="button" class="btn btn-link btn-sm p-0 route-toggle"
+                    @click="openRouteKey = openRouteKey === routeKey(task) ? null : routeKey(task)">
+              {{ openRouteKey === routeKey(task) ? 'Hide route' : 'Show route' }}
+            </button>
+            <WalkMap v-if="openRouteKey === routeKey(task)" class="route-map mt-2"
+                     :planned-route="task.walkRoute.path.coordinates" />
+          </template>
         </div>
       </div>
 
@@ -350,6 +373,16 @@ onMounted(async () => {
 .task-row {
   padding: 0.75rem 0 0.75rem 1.75rem;
   border-top: 1px solid #f1ece6;
+}
+.route-toggle {
+  color: #c44f1c;
+  font-weight: 600;
+}
+.route-map {
+  height: 240px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #ede3d8;
 }
 .freq-badge {
   background: #f6e3d9;
