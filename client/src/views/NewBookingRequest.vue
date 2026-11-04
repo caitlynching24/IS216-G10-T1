@@ -298,7 +298,7 @@ onMounted(async () => {
     </div>
 
     <!-- Price preview (beside the form on big screens, under it on phones, with the Send button) -->
-    <div class="col-lg-4 col-xl-3">
+    <div class="col-lg-4 col-xl-3 nbr-summary-col">
       <div class="step-card nbr-summary">
           <h3 class="step-head">Summary</h3>
           <!-- what was chosen so far -->
@@ -432,6 +432,10 @@ onMounted(async () => {
 /* summary: stays in view beside the form on big screens */
 @media (min-width: 992px) {
   .nbr-summary { position: sticky; top: calc(7vh + 1rem); }
+  /* the column runs the full height of the steps, so the sticky card has room to stay in view all the way down to Notes;
+     a long summary scrolls inside the card so the Send button can always be reached */
+  .nbr-summary-col { align-self: stretch; }
+  .nbr-summary { max-height: calc(100vh - 7vh - 2rem); overflow-y: auto; }
 }
 .sum-row { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.9rem; padding: 0.15rem 0; }
 .sum-row > span:first-child { color: #6b5f56; }
