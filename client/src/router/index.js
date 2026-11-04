@@ -66,6 +66,10 @@ router.beforeEach(async (to) => {
     if (!currentUser.value) {
       return { path: '/login', query: { redirect: to.fullPath } }
     }
+    // wrong account type (e.g. an owner opening /sitter/requests): send them to their own home page
+    if (to.meta.role && currentUser.value.role !== to.meta.role) {
+      return '/home'
+    }
   }
 })
 

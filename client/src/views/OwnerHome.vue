@@ -59,10 +59,10 @@ const userRating = ref(0) //initial rating value
 //search name
 const searchKey = ref("")
 
-const availableFrom = ref("")
-
 // search date
+const availableFrom = ref("")
 const availableTo = ref("")
+
 // optional hours for every day, e.g. '09:00' and '17:00' ('' = any time)
 const availableTimeFrom = ref("")
 const availableTimeTo = ref("")
@@ -430,7 +430,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div class="owner-home container-fluid">
+    <div class="owner-home">
       <!-- heading -->
       <div class="d-flex flex-column mb-2">
         <!-- search bar  -->

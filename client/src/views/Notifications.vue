@@ -178,9 +178,7 @@ async function clearAllNotifications() {
 
 <style scoped>
 /* PetSociety design system */
-/* .notifications-page {
-  max-width: 760px;
-} */
+
 .page-title {
   font-size: 32px;
   font-weight: 700;

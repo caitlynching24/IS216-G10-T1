@@ -106,19 +106,42 @@ function onTouchEnd(e) {
 
             <!-- checklist -->
             <div v-else-if="s.key === 'tasks'" class="mock panel">
-                <div class="task task--done">
-                <span class="box box--on" style="--d: 0.5s"></span>
-                <span class="box box--on" style="--d: 0.9s"></span>
-                <span>Feed at 8am and 6pm</span>
+              <div class="task-row">
+                <svg class="task-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 11h16a8 8 0 0 1-16 0zM9 20h6M12 4v3" fill="none" stroke="currentColor"
+                        stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <div class="task-main">
+                  <strong class="task-title">Feed kibble</strong>
+                  <span class="task-sub">2 cups of Kibble · at 6:30 pm</span>
                 </div>
-                <div class="task task--done">
-                <span class="box box--on" style="--d: 1.3s"></span>
-                <span>Give medication</span>
+                <span class="task-btn">6:30 pm</span>
+              </div>
+
+              <div class="task-row">
+                <svg class="task-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="14" cy="5" r="1.8" fill="currentColor" />
+                  <path d="M8 21l2.5-6 3 2v4M10.5 15l1-5 3 1.5 2.5 2M9 9.5l3.5-1" fill="none" stroke="currentColor"
+                        stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <div class="task-main">
+                  <strong class="task-title">Just one round</strong>
+                  <span class="task-sub">Route: smu · 705 m · at 7:30 pm</span>
                 </div>
-                <div class="task">
-                <span class="box"></span>
-                <span>30-minute walk</span>
+                <span class="task-btn task-btn--accent">Start walk</span>
+              </div>
+
+              <div class="task-row">
+                <svg class="task-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M10.5 20a4.5 4.5 0 0 1-3.2-7.7l5-5a4.5 4.5 0 0 1 6.4 6.4l-5 5A4.5 4.5 0 0 1 10.5 20zM9.6 9.6l4.8 4.8"
+                        fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <div class="task-main">
+                  <strong class="task-title">Hide in wet food</strong>
+                  <span class="task-sub">Meloxicam, Half a tablet · with food</span>
                 </div>
+                <span class="task-btn task-btn--done">Done</span>
+              </div>
             </div>
 
             <!-- route -->
@@ -264,6 +287,12 @@ function onTouchEnd(e) {
     width: 2rem;
     height: 2rem;
   }
+  .task-btn {
+    padding: 0.15rem 0.5rem;
+  }
+  .task-title {
+    font-size: 0.75rem;
+  }
 }
 
 .mock {
@@ -375,47 +404,51 @@ function onTouchEnd(e) {
   font-size: 0.8rem;
 }
 
-.task {
+.task-row {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.45rem 0;
-  font-size: 0.9rem;
-  color: var(--ink);
+  gap: 0.6rem;
+  padding: 0.5rem 0;
 }
-.task + .task {
+.task-row + .task-row {
   border-top: 1px solid #f0e3d4;
 }
-.task span:last-child {
-  margin-left: 0.35rem;
-}
-.task--done span:last-child {
-  color: var(--muted);
-  text-decoration: line-through;
-}
-.box {
-  position: relative;
-  flex: 0 0 auto;
+.task-icon {
+  flex: none;
   width: 1.15rem;
   height: 1.15rem;
-  border: 2px solid var(--ink);
-  border-radius: 4px;
+  color: var(--accent-deep);
+}
+.task-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.task-title {
+  font-size: 0.8rem;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.task-sub {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+.task-btn {
+  flex: none;
+  padding: 0.2rem 0.65rem;
+  border: 1px solid #d9c3ad;
+  border-radius: 999px;
   background: #fff;
+  color: var(--ink);
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
-.box--on {
-  background: var(--accent-deep);
+.task-btn--accent {
   border-color: var(--accent-deep);
-}
-.box--on::after {
-  content: '';
-  position: absolute;
-  left: 0.3rem;
-  top: 0.08rem;
-  width: 0.3rem;
-  height: 0.6rem;
-  border: solid #fff;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
+  color: var(--accent-deep);
 }
 
 .map {
@@ -448,16 +481,15 @@ function onTouchEnd(e) {
 .pin-ring {
   fill: rgba(196, 79, 28, 0.2);
 }
-
-.fc-slide.is-active .route {
-  animation: fc-draw 2.6s ease-in-out 0.3s backwards;
+.fc-slide.is-active .task-btn {
+  animation: fc-pop 0.35s ease-out 0.5s backwards;
 }
-.fc-slide.is-active .pin-ring {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: fc-pop 0.4s ease-out 2.9s backwards;
+.fc-slide.is-active .task-row:nth-child(2) .task-btn {
+  animation-delay: 0.9s;
 }
-
+.fc-slide.is-active .task-row:nth-child(3) .task-btn {
+  animation-delay: 1.3s;
+}
 .map-label {
   margin: 0.5rem 0 0;
   text-align: center;
@@ -494,10 +526,6 @@ function onTouchEnd(e) {
   margin: 0.6rem 0 0.3rem;
   font-size: 0.85rem;
   color: var(--ink);
-}
-
-.fc-slide.is-active .box--on {
-  animation: fc-pop 0.35s ease-out var(--d, 0s) backwards;
 }
 .fc-slide.is-active .route {
   animation: fc-draw 1.8s ease-out 0.3s backwards;
@@ -596,7 +624,7 @@ function onTouchEnd(e) {
   .fc-slide.is-active {
     transition: none;
   }
-  .fc-slide.is-active .box--on,
+  .fc-slide.is-active .task-btn,
   .fc-slide.is-active .route,
   .fc-slide.is-active .pin,
   .fc-slide.is-active .pin-ring {
