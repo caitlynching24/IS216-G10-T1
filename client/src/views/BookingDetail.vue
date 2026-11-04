@@ -282,6 +282,11 @@ onMounted(async () => {
         <SessionChat v-if="showChat" class="ms-auto" :booking-id="booking._id" :is-sitter="isSitter"
                      :can-send="chatLive" button-text="Chat" />
       </div>
+      <!-- from 992px: two columns, the booking's cards on the left and the date, price and the other person (with the buttons) on the right.
+           Under 992px both wrappers use display: contents, so the cards stay in one column in the same order as before (see .bd-*). -->
+      <div class="bd-layout">
+      <div class="bd-side">
+      <div class="bd-when">
       <p class="text-muted fw-semibold mb-3">
         {{ formatBookingWhen(booking) }} · {{ formatPrice(booking.totalPrice) }}
       </p>
@@ -289,120 +294,9 @@ onMounted(async () => {
       <ul v-if="hoursVary(booking)" class="small text-muted mb-3 ps-3">
         <li v-for="line in dayTimesList(booking)" :key="line">{{ line }}</li>
       </ul>
-
-      <div v-if="booking.status === 'cancelled'" class="alert alert-secondary">
-        {{ booking.cancelledBy === 'owner' ? 'The owner withdrew or cancelled this booking.' : booking.cancelledBy === 'sitter' ? 'The sitter cancelled this booking.' : 'This booking was cancelled.' }}
-        The hours are free on the sitter's calendar again.
-        <div v-if="booking.cancelReason" class="mt-2"><strong>Reason:</strong> “{{ booking.cancelReason }}”</div>
       </div>
-      <div v-else-if="booking.status === 'expired'" class="alert alert-secondary">
-        This request expired: the start time passed before the owner confirmed it.
-      </div>
-      <div v-else-if="booking.status === 'accepted'" class="alert alert-info">
-        {{ isSitter ? 'You accepted this request. Waiting for the owner to confirm; the hours are held for you until then.'
-                    : 'The sitter accepted your request. Confirm it below to make the booking final.' }}
-      </div>
-      <!-- <div v-if="message" class="alert alert-success">{{ message }}</div> -->
-      <div v-if="actionError" class="alert alert-warning">{{ actionError }}</div>
-
-      <!-- Pets: tap one to show its checklist below. With one pet there is nothing to choose, so this card is left out
-           and the pet's picture and name go at the top of the checklist card instead -->
-      <div v-if="pets.length !== 1" class="detail-card p-4 mb-3" :class="{ 'opacity-75': booking.status === 'cancelled' }">
-        <h6 class="section-title">Pets · tap a pet to see its checklist</h6>
-        <p v-if="!pets.length" class="text-muted mb-0">No pets listed.</p>
-        <div class="row g-2">
-          <div v-for="pet in pets" :key="pet._id" class="col-12 col-sm-6">
-            <button
-              type="button"
-              class="pet-card"
-              :class="{ active: pet._id === selectedPetId }"
-              :aria-pressed="pet._id === selectedPetId"
-              @click="selectedPetId = pet._id"
-            >
-              <img v-if="pet.photo?.url" :src="pet.photo.url" :alt="pet.name" class="pet-photo" />
-              <span v-else class="pet-photo pet-initial">{{ pet.name.charAt(0).toUpperCase() }}</span>
-              <span>
-                <strong class="pet-name d-block">{{ pet.name }}</strong>
-                <small class="text-muted">{{ petKind(pet) }}</small>
-              </span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Care checklist for the chosen pet: look only, so the boxes are switched off -->
-      <div class="detail-card p-4 mb-3" :class="{ 'opacity-75': booking.status === 'cancelled' }">
-        <h6 class="section-title">
-          {{ pets.length > 1 && selectedPet ? `${selectedPet.name}'s checklist` : 'Care checklist' }}
-          · {{ visibleTasks.length }} task{{ visibleTasks.length === 1 ? '' : 's' }}
-        </h6>
-        <!-- one pet: its picture, name and kind sit at the top of this card -->
-        <div v-if="pets.length === 1" class="one-pet-row d-flex align-items-center gap-3">
-          <img v-if="pets[0].photo?.url" :src="pets[0].photo.url" :alt="pets[0].name" class="pet-photo" />
-          <span v-else class="pet-photo pet-initial">{{ pets[0].name.charAt(0).toUpperCase() }}</span>
-          <span>
-            <strong class="pet-name d-block">{{ pets[0].name }}</strong>
-            <small class="text-muted">{{ petKind(pets[0]) }}</small>
-          </span>
-        </div>
-        <p v-if="!visibleTasks.length" class="text-muted mb-0">No tasks added{{ pets.length > 1 && selectedPet ? ` for ${selectedPet.name}` : '' }}.</p>
-        <div v-for="(task, i) in visibleTasks" :key="i" class="task-row">
-          <div class="form-check d-flex align-items-center gap-2 mb-0 ps-0">
-            <input :id="`task-${i}`" class="form-check-input mt-0" type="checkbox" disabled />
-            <label class="form-check-label flex-grow-1" :for="`task-${i}`">
-              {{ task.title }}
-              <small v-if="pets.length > 1" class="d-block text-muted">
-                {{ alsoFor(task).length ? `Also for ${alsoFor(task).join(', ')}` : `Only for ${selectedPet?.name}` }}
-              </small>
-              <small v-if="task.days?.length" class="d-block text-muted">Only on {{ task.days.map(prettyDate).join(', ') }}</small>
-              <small v-if="task.category === 'walk'" class="d-block text-muted">{{ routeText(task) }}</small>
-            </label>
-            <span v-if="task.dailyFrequency > 1" class="freq-badge">{{ task.dailyFrequency }} times a day</span>
-          </div>
-          <CareDetailsSummary :task="task" />
-          <!-- the route map, when this viewer is allowed to see the path -->
-          <template v-if="task.walkRoute?.path">
-            <button type="button" class="btn btn-link btn-sm p-0 route-toggle"
-                    @click="openRouteKey = openRouteKey === routeKey(task) ? null : routeKey(task)">
-              {{ openRouteKey === routeKey(task) ? 'Hide route' : 'Show route' }}
-            </button>
-            <WalkMap v-if="openRouteKey === routeKey(task)" class="route-map mt-2"
-                     :planned-route="task.walkRoute.path.coordinates" />
-          </template>
-        </div>
-      </div>
-
-      <!-- Care details: the owner fills these in after confirming -->
-      <div v-if="canEditDetails || detailsLocked" ref="detailsCard" class="detail-card details-card p-4 mb-3">
-        <h6 class="section-title">Care details</h6>
-        <CareDetailsForm
-          v-if="canEditDetails && detailsFormOpen"
-          :booking-id="booking._id"
-          :tasks="tasks"
-          :close-text="detailsSavedAt ? 'Cancel' : 'Add later'"
-          @saved="detailsSaved"
-          @photos-changed="tasks = $event.items"
-          @close="detailsFormOpen = false"
-        />
-        <p v-else-if="detailsLocked" class="text-muted mb-0">Care details are locked because the first session has started.</p>
-        <template v-else>
-          <div v-if="!detailsSavedAt" class="alert alert-warning">
-            <strong>Care details needed.</strong> Tell the sitter things like the food amount, medicine dosage and where the leash is kept.
-          </div>
-          <p v-else class="text-muted">Saved. You can change these until the first session starts.</p>
-          <button type="button" class="btn btn-brand w-100" @click="openDetailsForm">
-            {{ detailsSavedAt ? 'Edit care details' : 'Add care details' }}
-          </button>
-        </template>
-      </div>
-
-      <div v-if="booking.notes" class="detail-card p-4 mb-3" :class="{ 'opacity-75': booking.status === 'cancelled' }">
-        <h6 class="section-title">Notes from owner</h6>
-        <p class="mb-0">"{{ booking.notes }}"</p>
-      </div>
-
       <!-- The other person, with the buttons at the end of the page -->
-      <div class="detail-card p-4 mb-3">
+      <div class="detail-card bd-person p-4 mb-3">
         <h6 class="section-title">{{ isSitter ? 'Owner' : 'Sitter' }}</h6>
         <!-- flex-wrap: on narrow phones View profile moves under the name instead of pushing the page wider -->
         <div class="d-flex flex-wrap align-items-center gap-3">
@@ -445,8 +339,122 @@ onMounted(async () => {
         </div>
       </div>
 
+      </div>
+      <div class="bd-main">
+
+      <div v-if="booking.status === 'cancelled'" class="alert alert-secondary bd-o2">
+        {{ booking.cancelledBy === 'owner' ? 'The owner withdrew or cancelled this booking.' : booking.cancelledBy === 'sitter' ? 'The sitter cancelled this booking.' : 'This booking was cancelled.' }}
+        The hours are free on the sitter's calendar again.
+        <div v-if="booking.cancelReason" class="mt-2"><strong>Reason:</strong> “{{ booking.cancelReason }}”</div>
+      </div>
+      <div v-else-if="booking.status === 'expired'" class="alert alert-secondary bd-o2">
+        This request expired: the start time passed before the owner confirmed it.
+      </div>
+      <div v-else-if="booking.status === 'accepted'" class="alert alert-info bd-o2">
+        {{ isSitter ? 'You accepted this request. Waiting for the owner to confirm; the hours are held for you until then.'
+                    : 'The sitter accepted your request. Confirm it below to make the booking final.' }}
+      </div>
+      <!-- <div v-if="message" class="alert alert-success">{{ message }}</div> -->
+      <div v-if="actionError" class="alert alert-warning bd-o2">{{ actionError }}</div>
+
+      <!-- Pets: tap one to show its checklist below. With one pet there is nothing to choose, so this card is left out
+           and the pet's picture and name go at the top of the checklist card instead -->
+      <div v-if="pets.length !== 1" class="detail-card bd-o3 p-4 mb-3" :class="{ 'opacity-75': booking.status === 'cancelled' }">
+        <h6 class="section-title">Pets · tap a pet to see its checklist</h6>
+        <p v-if="!pets.length" class="text-muted mb-0">No pets listed.</p>
+        <div class="row g-2">
+          <div v-for="pet in pets" :key="pet._id" class="col-12 col-sm-6">
+            <button
+              type="button"
+              class="pet-card"
+              :class="{ active: pet._id === selectedPetId }"
+              :aria-pressed="pet._id === selectedPetId"
+              @click="selectedPetId = pet._id"
+            >
+              <img v-if="pet.photo?.url" :src="pet.photo.url" :alt="pet.name" class="pet-photo" />
+              <span v-else class="pet-photo pet-initial">{{ pet.name.charAt(0).toUpperCase() }}</span>
+              <span>
+                <strong class="pet-name d-block">{{ pet.name }}</strong>
+                <small class="text-muted">{{ petKind(pet) }}</small>
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Care checklist for the chosen pet: look only, so the boxes are switched off -->
+      <div class="detail-card bd-o3 p-4 mb-3" :class="{ 'opacity-75': booking.status === 'cancelled' }">
+        <h6 class="section-title">
+          {{ pets.length > 1 && selectedPet ? `${selectedPet.name}'s checklist` : 'Care checklist' }}
+          · {{ visibleTasks.length }} task{{ visibleTasks.length === 1 ? '' : 's' }}
+        </h6>
+        <!-- one pet: its picture, name and kind sit at the top of this card -->
+        <div v-if="pets.length === 1" class="one-pet-row d-flex align-items-center gap-3">
+          <img v-if="pets[0].photo?.url" :src="pets[0].photo.url" :alt="pets[0].name" class="pet-photo" />
+          <span v-else class="pet-photo pet-initial">{{ pets[0].name.charAt(0).toUpperCase() }}</span>
+          <span>
+            <strong class="pet-name d-block">{{ pets[0].name }}</strong>
+            <small class="text-muted">{{ petKind(pets[0]) }}</small>
+          </span>
+        </div>
+        <p v-if="!visibleTasks.length" class="text-muted mb-0">No tasks added{{ pets.length > 1 && selectedPet ? ` for ${selectedPet.name}` : '' }}.</p>
+        <div v-for="(task, i) in visibleTasks" :key="i" class="task-row">
+          <div class="form-check d-flex align-items-center gap-2 mb-0 ps-0">
+            <input :id="`task-${i}`" class="form-check-input mt-0" type="checkbox" disabled />
+            <label class="form-check-label flex-grow-1" :for="`task-${i}`">
+              {{ task.title }}
+              <small v-if="pets.length > 1" class="d-block text-muted">
+                {{ alsoFor(task).length ? `Also for ${alsoFor(task).join(', ')}` : `Only for ${selectedPet?.name}` }}
+              </small>
+              <small v-if="task.days?.length" class="d-block text-muted">Only on {{ task.days.map(prettyDate).join(', ') }}</small>
+              <small v-if="task.category === 'walk'" class="d-block text-muted">{{ routeText(task) }}</small>
+            </label>
+            <span v-if="task.dailyFrequency > 1" class="freq-badge">{{ task.dailyFrequency }} times a day</span>
+          </div>
+          <CareDetailsSummary :task="task" />
+          <!-- the route map, when this viewer is allowed to see the path -->
+          <template v-if="task.walkRoute?.path">
+            <button type="button" class="btn btn-link btn-sm p-0 route-toggle"
+                    @click="openRouteKey = openRouteKey === routeKey(task) ? null : routeKey(task)">
+              {{ openRouteKey === routeKey(task) ? 'Hide route' : 'Show route' }}
+            </button>
+            <WalkMap v-if="openRouteKey === routeKey(task)" class="route-map mt-2"
+                     :planned-route="task.walkRoute.path.coordinates" />
+          </template>
+        </div>
+      </div>
+
+      <!-- Care details: the owner fills these in after confirming -->
+      <div v-if="canEditDetails || detailsLocked" ref="detailsCard" class="detail-card details-card bd-o3 p-4 mb-3">
+        <h6 class="section-title">Care details</h6>
+        <CareDetailsForm
+          v-if="canEditDetails && detailsFormOpen"
+          :booking-id="booking._id"
+          :tasks="tasks"
+          :close-text="detailsSavedAt ? 'Cancel' : 'Add later'"
+          @saved="detailsSaved"
+          @photos-changed="tasks = $event.items"
+          @close="detailsFormOpen = false"
+        />
+        <p v-else-if="detailsLocked" class="text-muted mb-0">Care details are locked because the first session has started.</p>
+        <template v-else>
+          <div v-if="!detailsSavedAt" class="alert alert-warning">
+            <strong>Care details needed.</strong> Tell the sitter things like the food amount, medicine dosage and where the leash is kept.
+          </div>
+          <p v-else class="text-muted">Saved. You can change these until the first session starts.</p>
+          <button type="button" class="btn btn-brand w-100" @click="openDetailsForm">
+            {{ detailsSavedAt ? 'Edit care details' : 'Add care details' }}
+          </button>
+        </template>
+      </div>
+
+      <div v-if="booking.notes" class="detail-card bd-o3 p-4 mb-3" :class="{ 'opacity-75': booking.status === 'cancelled' }">
+        <h6 class="section-title">Notes from owner</h6>
+        <p class="mb-0">"{{ booking.notes }}"</p>
+      </div>
+
       <!-- Review: the owner rates the sitter (or sees their review); the sitter sees the owner's review -->
-      <div v-if="canSeeReview && reviewLoaded" id="review" class="detail-card p-4 mb-3">
+      <div v-if="canSeeReview && reviewLoaded" id="review" class="detail-card bd-o5 p-4 mb-3">
         <h6 class="section-title">{{ isSitter ? "Owner's review" : 'Review your sitter' }}</h6>
         <template v-if="review">
           <div class="fs-5" style="color:#FFD700;">{{ reviewStars }}</div>
@@ -459,6 +467,8 @@ onMounted(async () => {
           <ReviewForm :booking-id="booking._id" @saved="review = $event" />
           <p v-if="reviewUntil" class="small text-muted mt-2 mb-0">You can review until {{ reviewUntil }}.</p>
         </template>
+      </div>
+      </div>
       </div>
     </template>
 
@@ -477,10 +487,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.detail-wrap {
-  max-width: 760px;
-  margin: 0 auto;
-}
 .detail-title {
   font-family: 'Fredoka', 'Nunito', sans-serif;
   font-weight: 600;
@@ -489,6 +495,34 @@ onMounted(async () => {
   background: #fff;
   border: 1px solid #ede3d8;
   border-radius: 12px;
+}
+
+/* the two columns (from 992px). Phones and tablets: one column in this order, as before:
+   date and price, notices, pets / checklist / care details / notes, the other person, the review */
+.bd-layout { display: flex; flex-direction: column; }
+.bd-side, .bd-main { display: contents; }
+.bd-when { order: 1; }
+.bd-o2 { order: 2; }
+.bd-o3 { order: 3; }
+.bd-person { order: 4; }
+.bd-o5 { order: 5; }
+@media (min-width: 992px) {
+  .bd-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 0 1.5rem;
+    align-items: start;
+  }
+  .bd-main { display: block; grid-column: 1; grid-row: 1; }
+  /* the right column stays in view while the left one scrolls */
+  .bd-side { display: block; grid-column: 2; grid-row: 1; position: sticky; top: 1rem; }
+  .bd-when {
+    margin-bottom: 1rem;
+    padding: 1rem 1.25rem 0.25rem;
+    background: #fff;
+    border: 1px solid #ede3d8;
+    border-radius: 12px;
+  }
 }
 .details-card {
   scroll-margin-top: 5rem; /* stops the top bar covering the card when the page scrolls to it */

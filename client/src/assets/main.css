@@ -560,7 +560,7 @@ body {
 }
 
 /* handling page widths */
-.pf, .br, .sesh, .ob, .trans, .oh, .sh, .pay, .ur, .noti, .cal-page {
+.pf, .br, .sesh, .ob, .trans, .oh, .sh, .pay, .ur, .noti, .cal-page, .detail-wrap, .ep, .nbr {
   max-width: 1400px;
   margin-inline: auto;
   padding: 0.5rem 1.25rem 2.5rem;
