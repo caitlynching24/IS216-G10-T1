@@ -17,14 +17,14 @@ const categories = Object.keys(SERVICE_PRICES) // same 6 types the server accept
 const tasks = ref([]) // each task: { category, title, dailyFrequency, petIds, walkRouteId, someDays, days }
 const dayCount = computed(() => props.dates.length)
 
-// An example for the "What to do" box, different for each type of task
+// An example for the "Title" box, different for each type of task
 const PLACEHOLDERS = {
-  feed: 'e.g. Feed 1 cup of kibble at 8am',
-  walk: 'e.g. 30-minute walk in the park',
+  feed: 'e.g. Lunch',
+  walk: 'e.g. Afternoon Walk',
   groom: 'e.g. Clean ears and brush coat',
-  medication: 'e.g. Half a tablet with dinner',
-  clean: 'e.g. Empty the litter tray and wash the bowls',
-  play: 'e.g. 20 minutes of fetch in the garden'
+  medication: 'e.g. Dinner Pill',
+  clean: 'e.g. Empty Litter Tray',
+  play: 'e.g. Playing Fetch'
 }
 
 // The owner's recorded walking routes, for the route dropdown on walk tasks
@@ -146,7 +146,7 @@ watch(tasks, () => emit('change', tasks.value), { deep: true })
 
   <!-- Labels written once, above every task (on phones each task shows its own labels instead) -->
   <div v-if="tasks.length" class="cl-grid cl-head">
-    <span>Type</span><span>What to do</span><span>Times a day</span><span class="text-end">Per day</span><span></span>
+    <span>Type</span><span>Title</span><span>Times a day</span><span class="text-end">Per day</span><span></span>
   </div>
 
   <div v-for="(task, i) in tasks" :key="i" class="cl-task">
@@ -159,7 +159,7 @@ watch(tasks, () => emit('change', tasks.value), { deep: true })
         </select>
       </div>
       <div class="cl-what">
-        <label class="cl-label" :for="`task-title-${i}`">What to do</label>
+        <label class="cl-label" :for="`task-title-${i}`">Title</label>
         <input :id="`task-title-${i}`" v-model="task.title" type="text" maxlength="120" class="form-control form-control-sm" :placeholder="PLACEHOLDERS[task.category]" />
       </div>
       <div>
@@ -191,7 +191,7 @@ watch(tasks, () => emit('change', tasks.value), { deep: true })
           <router-link to="/owner/routes/new" target="_blank">Record a route</router-link>, or choose "follow my instructions".
         </p>
         <p v-else-if="task.walkRouteId === 'instructions'" class="small text-muted mb-0 mt-1">
-          Put the instructions in "What to do". The walk is still tracked, but can't be checked against a route.
+          Walk without a fixed route. Walk is still tracked.
         </p>
       </div>
     </div>

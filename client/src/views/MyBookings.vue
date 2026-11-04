@@ -88,7 +88,7 @@ async function confirmBooking(id) {
     bookings.value.find((b) => b._id === id).status = updated.status
     sendNotification(id, 'booking-confirmed', `${currentUser.value.username} confirmed your booking.`)
     // straight on to the booking's page, with the care details form open
-    router.push({ name: 'booking-detail', params: { id }, query: { details: 'open' } })
+    router.push({ name: 'booking-detail', params: { id }, query: { details: 'open', confirmed: '1' } })
   } catch (err) {
     actionError.value = err.response?.data?.message || 'Could not confirm the booking.'
   } finally {

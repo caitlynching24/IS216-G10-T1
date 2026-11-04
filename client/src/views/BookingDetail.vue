@@ -13,7 +13,9 @@ import CancelBookingModal from '../components/CancelBookingModal.vue'
 import CareDetailsForm from '../components/CareDetailsForm.vue'
 import CareDetailsSummary from '../components/CareDetailsSummary.vue'
 import { formatPrice, formatBookingWhen, hoursVary, dayTimesList } from '../utils/bookingHelpers.js'
-import { reviewsApi } from '../services/api.js'
+import { reviewsApi, visitsApi } from '../services/api.js'
+import ReportRows from '../components/ReportRows.vue'
+import VisitReportModal from '../components/VisitReportModal.vue'
 import ReviewForm from '../components/ReviewForm.vue'
 import { shortDate } from '../utils/visitReport.js'
 import SessionChat from '../components/SessionChat.vue'
@@ -89,6 +91,7 @@ const cancelText = computed(() => (status.value === 'confirmed' ? 'Cancel bookin
 const detailsSavedAt = ref(null) // null = not saved yet, so the card keeps asking for them
 const detailsFormOpen = ref(false)
 const detailsCard = ref(null)
+const detailsFromList = ref(false) // the form was opened from My Bookings, so "Add later" / "Cancel" goes back there
 const canEditDetails = computed(() => !isSitter.value && status.value === 'confirmed' && tasks.value.length > 0)
 const detailsLocked = computed(() => !isSitter.value && status.value === 'in-progress' && tasks.value.length > 0)
 
@@ -97,6 +100,12 @@ async function openDetailsForm() {
   await nextTick()
   const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
   detailsCard.value?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' })
+}
+
+// "Add later" / "Cancel": back to My Bookings (Upcoming tab) if the form was opened from there, otherwise just close it
+function closeDetailsForm() {
+  detailsFormOpen.value = false
+  if (detailsFromList.value) router.push({ name: 'owner-bookings', query: { tab: 'upcoming' } })
 }
 
 function detailsSaved(saved) {
@@ -221,6 +230,23 @@ async function checkMessages() {
   }
 }
 
+// Visit reports (owner): one row per finished session, from the first finished session on.
+// Each row opens the same report window as the Session page's "Recently ended".
+const reportEntry = ref(null) // the booking's report entry (server/src/utils/visitReports.js), finished days only
+const openReport = ref(null) // { dayIndex } while the report window is open
+const REPORT_STATUSES = ['in-progress', 'completed', 'paid']
+async function loadReports() {
+  if (isSitter.value || !REPORT_STATUSES.includes(status.value)) return
+  try {
+    const entry = await visitsApi.report(route.params.id)
+    // a session still going on has no report yet
+    const days = entry.days.filter((d) => d.visit?.status === 'completed')
+    reportEntry.value = days.length ? { ...entry, days } : null
+  } catch (err) {
+    console.warn('Could not load the visit reports', err)
+  }
+}
+
 // Reviews close 30 days after the booking's last booked time (the server sends the date and checks it too)
 const reviewUntil = computed(() => (booking.value?.reviewOpenUntil ? shortDate(new Date(booking.value.reviewOpenUntil)) : ''))
 const reviewClosed = computed(() => booking.value?.reviewOpenUntil != null && Date.now() > booking.value.reviewOpenUntil)
@@ -234,6 +260,7 @@ onMounted(async () => {
     detailsSavedAt.value = care.detailsSavedAt
     selectedPetId.value = booking.value.petIds?.[0]?._id || null // start on the first pet
     await checkMessages()
+    await loadReports()
     if (canSeeReview.value) {
       review.value = await reviewsApi.getForBooking(route.params.id).catch(() => null)
       reviewLoaded.value = true
@@ -251,9 +278,12 @@ onMounted(async () => {
   // Confirming from My Bookings comes here with ?details=open.
   // The address is then cleaned up, so refreshing the page doesn't reopen the form.
   if (route.query.details === 'open') {
+    const justConfirmed = Boolean(route.query.confirmed)
     router.replace({ query: {} })
     if (canEditDetails.value) {
-      message.value = 'Booking confirmed ✅ Add the care details now, or come back to them later.'
+      detailsFromList.value = true
+      // ?confirmed=1 when coming straight from confirming on My Bookings (not from its "Add care details" button)
+      if (justConfirmed) message.value = 'Booking confirmed ✅ Add the care details now, or come back to them later.'
       await openDetailsForm()
     }
   }
@@ -357,6 +387,11 @@ onMounted(async () => {
       <!-- <div v-if="message" class="alert alert-success">{{ message }}</div> -->
       <div v-if="actionError" class="alert alert-warning bd-o2">{{ actionError }}</div>
 
+      <!-- Visit reports (owner): the same rows as in "Recently ended" on the Session page; each opens the report window -->
+      <div v-if="reportEntry" class="detail-card bd-o3 p-4 mb-3">
+        <ReportRows :entry="reportEntry" @open="openReport = { dayIndex: $event }" />
+      </div>
+
       <!-- Pets: tap one to show its checklist below. With one pet there is nothing to choose, so this card is left out
            and the pet's picture and name go at the top of the checklist card instead -->
       <div v-if="pets.length !== 1" class="detail-card bd-o3 p-4 mb-3" :class="{ 'opacity-75': booking.status === 'cancelled' }">
@@ -434,7 +469,7 @@ onMounted(async () => {
           :close-text="detailsSavedAt ? 'Cancel' : 'Add later'"
           @saved="detailsSaved"
           @photos-changed="tasks = $event.items"
-          @close="detailsFormOpen = false"
+          @close="closeDetailsForm"
         />
         <p v-else-if="detailsLocked" class="text-muted mb-0">Care details are locked because the first session has started.</p>
         <template v-else>
@@ -471,6 +506,9 @@ onMounted(async () => {
       </div>
       </div>
     </template>
+
+    <VisitReportModal v-if="openReport && reportEntry" :entry="reportEntry" :day-index="openReport.dayIndex"
+                      @close="openReport = null" @change-day="openReport.dayIndex = $event" />
 
     <!-- asks for the reason before cancelling -->
     <CancelBookingModal

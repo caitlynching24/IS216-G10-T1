@@ -1,4 +1,5 @@
 import Booking from '../models/bookingModel.js'
+import CareChecklist from '../models/CareChecklist.js'
 import { notifyBookingOnce } from '../models/notificationModel.js'
 import { syncBookingToGoogle } from '../utils/googleCalendar.js'
 import { bookingRange, dailyRanges, findClash, findPetClash, describeBooking } from '../utils/bookingTimes.js'
@@ -25,7 +26,21 @@ export const getMyBookings = async (req, res) => {
     .populate('petIds', 'name species photo')
     .sort({ startDate: 1 })
 
-  res.json(bookings)
+  if (req.session.role === 'sitter') {
+    return res.json(bookings)
+  }
+  // Owners: whether each confirmed booking's care details are still needed, for My Bookings'
+  // "Add care details" button and flag. 'needed' = it has tasks but the details were never saved,
+  // 'saved' = saved at least once, null = not confirmed yet, or no tasks to add details to.
+  const confirmedIds = bookings.filter((b) => b.status === 'confirmed').map((b) => b._id)
+  const checklists = confirmedIds.length
+    ? await CareChecklist.find({ bookingId: { $in: confirmedIds } }).select('bookingId detailsSavedAt items._id')
+    : []
+  const careByBooking = new Map(checklists.map((c) => [
+    String(c.bookingId),
+    c.items.length === 0 ? null : c.detailsSavedAt ? 'saved' : 'needed'
+  ]))
+  res.json(bookings.map((b) => ({ ...b.toJSON(), careDetails: careByBooking.get(String(b._id)) ?? null })))
 }
 
 // PATCH /api/bookings/:id/status   body: { "status": "accepted" } or { "status": "declined" }

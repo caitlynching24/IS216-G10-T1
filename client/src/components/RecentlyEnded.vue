@@ -3,8 +3,9 @@
 // each with a row per day that had a session (opens the visit report) and the review card.
 import { computed, onMounted, ref } from 'vue'
 import { visitsApi } from '../services/api.js'
-import { dateRange, dayLabel, shortDate, summarize, timeOf } from '../utils/visitReport.js'
+import { dateRange, shortDate } from '../utils/visitReport.js'
 import PaginationBar from './PaginationBar.vue'
+import ReportRows from './ReportRows.vue'
 import ReviewCard from './ReviewCard.vue'
 import SessionChat from './SessionChat.vue'
 
@@ -68,23 +69,6 @@ function reviewChip(e) {
   return { tone: 'open', text: `Review open until ${shortDate(new Date(e.reviewOpenUntil))}` }
 }
 
-// One row per day that had a session, newest first; index is the day's place in entry.days (for the report)
-function rows(e) {
-  return e.days.map((day, index) => {
-    const s = summarize(day, e.booking.pets)
-    return {
-      index,
-      day,
-      times: `${timeOf(day.visit.startedAt)} – ${day.visit.endedAt ? timeOf(day.visit.endedAt) : '…'}`,
-      count: `${s.done}/${s.expected}`,
-      photos: s.photos.length,
-      walks: s.walks.length,
-      warning: s.warn.length ? `${s.warn[0].short}${s.warn.length > 1 ? ` +${s.warn.length - 1}` : ''}` : '',
-      last: day.dayNumber === e.totalDays
-    }
-  }).reverse()
-}
-
 function reviewSaved(e, review) {
   e.review = review
 }
@@ -135,28 +119,7 @@ function reviewSaved(e, review) {
         </div>
 
         <div v-if="openIds.has(e.booking._id)" class="re-body">
-          <div class="re-rows">
-            <p class="re-label">Care reports · {{ e.days.length }} session{{ e.days.length === 1 ? '' : 's' }}<span class="re-hint"> · Tap a row for the full report</span></p>
-            <button v-for="r in rows(e)" :key="r.day.date" type="button" class="re-row"
-                    @click="emit('open-report', { entry: e, dayIndex: r.index })">
-              <span class="re-row__date">
-                <strong>{{ dayLabel(r.day.date) }}</strong>
-                <small>Day {{ r.day.dayNumber }}<span class="re-wide"> of {{ e.totalDays }}</span>{{ r.last ? ' · last' : '' }}</small>
-              </span>
-              <span class="re-row__times">{{ r.times }}</span>
-              <strong class="re-row__count">{{ r.count }}</strong>
-              <span class="re-row__meta">
-                <span v-if="r.photos" class="re-icon" :aria-label="`${r.photos} photos`">
-                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4zM12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /></svg>{{ r.photos }}
-                </span>
-                <span v-if="r.walks" class="re-icon" :aria-label="`${r.walks} walks`">
-                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M13 4a1.5 1.5 0 1 0 0 .01M10 21l2-6-3-3 2-4 3 2 3 1M7 13l1-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>{{ r.walks }}
-                </span>
-                <span v-if="r.warning" class="re-warn">⚠ {{ r.warning }}</span>
-              </span>
-              <span class="re-row__go" aria-hidden="true">›</span>
-            </button>
-          </div>
+          <ReportRows :entry="e" @open="emit('open-report', { entry: e, dayIndex: $event })" />
           <ReviewCard class="re-review" :booking-id="e.booking._id" :sitter-name="sitterName(e)" :review="e.review"
                       :open-until="e.reviewOpenUntil" compact @saved="reviewSaved(e, $event)" />
         </div>
@@ -330,69 +293,9 @@ function reviewSaved(e, review) {
   border-top: 1px solid #e6dcd3;
   background: #faf6f2;
 }
-.re-label {
-  margin: 0 0 0.6rem;
-  color: #5c524b;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-.re-row {
-  display: grid;
-  grid-template-columns: 6.4rem 8.6rem 2.8rem 1fr 1rem;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  margin-bottom: 0.7rem;
-  padding: 0.75rem 1rem;
-  border: 1px solid #e6dcd3;
-  border-radius: 10px;
-  background: #fff;
-  color: #2b2420;
-  text-align: left;
-}
-.re-row:hover {
-  border-color: var(--accent-main);
-}
-.re-toggle:focus-visible,
-.re-row:focus-visible {
+.re-toggle:focus-visible {
   outline: 3px solid var(--accent-deep);
   outline-offset: 2px;
-}
-.re-row__date {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.25;
-}
-.re-row__date small,
-.re-row__times {
-  color: #6b5f56;
-  font-size: 0.85rem;
-}
-.re-row__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem 0.7rem;
-  min-width: 0;
-}
-.re-icon {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  color: #6b5f56;
-  font-size: 0.85rem;
-}
-.re-warn {
-  color: #7a5a00;
-  font-size: 0.85rem;
-  font-weight: 800;
-  white-space: nowrap; /* the warning wraps as a whole, never mid-phrase */
-}
-.re-row__go {
-  color: #6b5f56;
-  font-size: 1.3rem;
 }
 .re-foot {
   margin-top: 0.8rem;
@@ -410,9 +313,7 @@ function reviewSaved(e, review) {
   }
   .re-avatar,
   .re-chip--ended,
-  .re-showhide__word,
-  .re-hint,
-  .re-wide {
+  .re-showhide__word {
     display: none;
   }
   .re-who {
@@ -433,27 +334,5 @@ function reviewSaved(e, review) {
   .re-review {
     order: -1; /* the review card comes first on phones */
   }
-  /* rows become three lines: date and ›, then times / count / icons, then the warning */
-  .re-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.3rem 0.75rem;
-  }
-  .re-row__date {
-    order: 1;
-    flex: 1 1 calc(100% - 2rem);
-    flex-direction: row;
-    gap: 0.35rem;
-    align-items: baseline;
-  }
-  .re-row__date small::before {
-    content: '· ';
-  }
-  .re-row__go { order: 2; }
-  .re-row__times { order: 3; }
-  .re-row__count { order: 4; }
-  .re-row__meta { display: contents; } /* its icons and warning join the row's own lines */
-  .re-icon { order: 5; }
-  .re-warn { order: 6; flex: 1 1 100%; }
 }
 </style>

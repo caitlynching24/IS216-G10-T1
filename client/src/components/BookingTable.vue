@@ -53,6 +53,10 @@ const PAST = ['paid', 'declined', 'cancelled', 'expired']
 function isPast(booking) {
   return props.viewer === 'owner' && PAST.includes(booking.status)
 }
+// Owner, confirmed booking: are its care details still needed? ('needed' / 'saved' / null, sent by the server)
+function careDetails(booking) {
+  return props.viewer === 'owner' && booking.status === 'confirmed' ? booking.careDetails ?? null : null
+}
 function sitterIdOf(booking) {
   return booking.sitterId?._id || booking.sitterId
 }
@@ -91,6 +95,9 @@ function sitterIdOf(booking) {
             <td class="d-none d-lg-table-cell">{{ formatPrice(b.totalPrice) }}</td>
             <td>
               <StatusPill :status="b.status" />
+              <div v-if="careDetails(b) === 'needed'" class="care-flag mt-1">
+                <span aria-hidden="true">⚠</span> Care details needed
+              </div>
               <div v-if="b.status === 'accepted'" class="small text-muted mt-1">
                 {{ viewer === 'owner' ? 'Waiting for you to confirm' : 'Waiting for the owner to confirm' }}
               </div>
@@ -128,6 +135,13 @@ function sitterIdOf(booking) {
                   class="btn btn-sm btn-brand"
                   :to="`/bookings/${b._id}/pay`"
                 >Pay now</router-link>
+                <!-- Owners add (or change) a confirmed booking's care details: opens Booking Detail with the form open -->
+                <router-link
+                  v-if="careDetails(b)"
+                  class="btn btn-sm text-nowrap"
+                  :class="careDetails(b) === 'needed' ? 'btn-brand' : 'btn-outline-secondary'"
+                  :to="`/bookings/${b._id}?details=open`"
+                >{{ careDetails(b) === 'needed' ? 'Add care details' : 'Edit care details' }}</router-link>
                 <!-- Owners can review the sitter once the sitter has finished (before or after paying) -->
                 <router-link
                   v-if="viewer === 'owner' && ['completed', 'paid'].includes(b.status)"
@@ -168,6 +182,19 @@ function sitterIdOf(booking) {
 </template>
 
 <style scoped>
+.care-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.55rem;
+  border: 1px solid #f1d7a6;
+  border-radius: 999px;
+  background: #fdf0c4;
+  color: #7a5a00;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
 .cancel-reason { font-style: italic; max-width: 16rem; white-space: normal; overflow-wrap: anywhere; } /* the reason someone gave for cancelling */
 .avatar {
   width: 36px;
