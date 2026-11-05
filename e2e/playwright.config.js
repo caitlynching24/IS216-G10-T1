@@ -1,10 +1,11 @@
 // Playwright settings for the PetSociety E2E tests.
 import { defineConfig, devices } from '@playwright/test'
+import { CLIENT_PORT, SERVER_PORT, SERVER_ENV } from './e2eEnv.js'
 
 export default defineConfig({
   testDir: './tests',
 
-  // Before anything else: reset the database to the seed data (see global-setup.js)
+  // Before anything else: reset the tests' own database (petsociety_e2e) to the test data (see global-setup.js)
   globalSetup: './global-setup.js',
 
   // All tests share ONE database, so run them one at a time.
@@ -22,17 +23,24 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
 
   use: {
-    // page.goto('/login') becomes http://localhost:5173/login
-    baseURL: 'http://localhost:5173',
+    // page.goto('/login') becomes http://localhost:5174/login (the tests' own copy of the app, see e2eEnv.js)
+    baseURL: `http://localhost:${CLIENT_PORT}`,
     // When a test fails, keep a screenshot and a step-by-step recording (trace) to look at
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure'
   },
 
-  // Starts the app for you. If it's already running (pnpm dev in another terminal), it uses that one.
+  // Starts the tests' own copy of the app on ports 5050 / 5174, using the petsociety_e2e database.
+  // It never reuses your normal pnpm dev (5000 / 5173), so tests can't change your own data. Both can run at once.
   webServer: [
-    { command: 'pnpm dev', cwd: '../server', url: 'http://localhost:5000/api/health', reuseExistingServer: true, timeout: 60_000 },
-    { command: 'pnpm dev', cwd: '../client', url: 'http://localhost:5173', reuseExistingServer: true, timeout: 60_000 }
+    {
+      command: 'pnpm start', cwd: '../server', url: `http://localhost:${SERVER_PORT}/api/health`,
+      env: { ...process.env, ...SERVER_ENV }, reuseExistingServer: false, timeout: 60_000
+    },
+    {
+      command: `pnpm dev --port ${CLIENT_PORT} --strictPort`, cwd: '../client', url: `http://localhost:${CLIENT_PORT}`,
+      env: { ...process.env, API_PROXY_TARGET: `http://localhost:${SERVER_PORT}` }, reuseExistingServer: false, timeout: 60_000
+    }
   ],
 
   projects: [

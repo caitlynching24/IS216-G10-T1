@@ -1,14 +1,14 @@
 // Seed data for the Session page: today's sessions in different states, and finished bookings with care reports
-// for "Recently ended" and the visit report window. Called by seedBookings.js (pnpm seed), which also clears it.
-import Booking from '../models/bookingModel.js'
-import CareChecklist from '../models/CareChecklist.js'
-import VisitSession from '../models/VisitSession.js'
-import Walk from '../models/walkModel.js'
-import Message from '../models/Message.js'
-import Review from '../models/reviewModel.js'
-import Payment from '../models/paymentModel.js'
-import { recalcSitterRating } from '../utils/ratingsCalc.js'
-import { pathLength } from '../utils/walkGeo.js'
+// for "Recently ended" and the visit report window. Part of the e2e test data: called by e2eSeed.js (pnpm seed:e2e), which also clears it.
+import Booking from '../../models/bookingModel.js'
+import CareChecklist from '../../models/CareChecklist.js'
+import VisitSession from '../../models/VisitSession.js'
+import Walk from '../../models/walkModel.js'
+import Message from '../../models/Message.js'
+import Review from '../../models/reviewModel.js'
+import Payment from '../../models/paymentModel.js'
+import { recalcSitterRating } from '../../utils/ratingsCalc.js'
+import { pathLength } from '../../utils/walkGeo.js'
 
 const PHOTO = (text) => ({ url: `https://placehold.co/600x600/png?text=${encodeURIComponent(text)}` })
 const MINUTE_MS = 60 * 1000

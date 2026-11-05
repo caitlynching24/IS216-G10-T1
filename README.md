@@ -96,14 +96,22 @@ IS216-G10-T1/
 ### Run
 ```bash
 cd e2e
-pnpm playwright test            # resets test data with `pnpm seed`, starts client + server, runs all tests
+pnpm playwright test            # resets the test database, starts its own client + server, runs all tests
 pnpm exec playwright show-report
 ```
 
-### Test accounts (created by the seed, password `Password123!`)
+The tests never touch your own data. They use their own database, `petsociety_e2e` (on the same server as `MONGO_URI`, created automatically), and start their own copy of the app on ports 5050 (server) and 5174 (client), so your normal `pnpm dev` on 5000 / 5173 can keep running. Before each run, `pnpm seed:e2e` resets that database to the test data in `server/src/seed/e2e/` (see `e2e/e2eEnv.js`).
+
+### Test accounts (in the test database only, password `Password123!`)
 - Owner: seed.owner@petsociety.com
 - Sitter: seed.sitter@petsociety.com
 - Sitter 2: seed.sitter2@petsociety.com
+
+### Demo data (for showing the app)
+`cd server && pnpm seed` (or `pnpm seed:demo`) creates 4 owners and 12 sitters with full histories, for demos, in the database in `server/.env`. It only replaces `demo.*` accounts. Password `Password123!`.
+- Owner: demo.claire@petsociety.com (shibamumclaire), the fullest account, with enough bookings, receipts and reports to fill more than one page
+- Sitter: demo.benny@petsociety.com (petbuddybenny), with 7 new requests, 6 reviews and a session in progress today
+- Other owners: demo.rayyan, demo.meiling, demo.jun; other sitters: demo.priya, demo.wei, demo.carmen, demo.faiz, demo.lucas, demo.wendy, demo.bala, demo.tiffany, demo.kai, demo.sara, demo.harith (all @petsociety.com)
 
 ### Test cases
 | ID | Journey | File |

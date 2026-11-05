@@ -41,8 +41,8 @@ test.describe('Authentication', () => {
   test('TC-04 a logged-out visitor cannot see My Bookings', async ({ page }) => {
     // setup + actions: go straight to an owner-only page without logging in
     await page.goto('/owner/bookings')
-    // assert: the page refuses and shows no bookings
-    await expect(page.getByText('Please log in first.')).toBeVisible()
+    // assert: the router sends them to log in first (and remembers where they were going), so no bookings show
+    await expect(page).toHaveURL(/\/login\?redirect=\/owner\/bookings/)
     await expect(page.getByRole('link', { name: 'Pay now' })).toHaveCount(0)
   })
 })
