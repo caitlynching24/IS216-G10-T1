@@ -190,9 +190,8 @@ pnpm exec playwright install chromium
 
 ```bash
 cd e2e
-pnpm test         # runs every test
-pnpm test:ui      # opens Playwright's UI to run tests one by one
-pnpm report       # opens the HTML report of the last run
+pnpm playwright test         # runs every test
+pnpm exec playwright show-report       # show test results
 ```
 
 **What a run does:**
