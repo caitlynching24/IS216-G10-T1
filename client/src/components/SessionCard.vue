@@ -23,7 +23,7 @@ const props = defineProps({
   isSitter: { type: Boolean, default: false },
   active: { type: Boolean, default: true } // false while another session is showing
 })
-const emit = defineEmits(['visit-change', 'unread', 'walk-ended', 'items-change', 'view-report'])
+const emit = defineEmits(['visit-change', 'unread', 'walk-ended', 'items-change', 'view-report', 'view-earlier'])
 
 const visit = ref(props.session.visit)
 const status = ref(props.session.booking.status)
@@ -64,6 +64,11 @@ const bookedHours = computed(() => (booking.value.startTime && booking.value.end
   ? `${clockText(booking.value.startTime)} – ${clockText(booking.value.endTime)}` : ''))
 const multiDay = computed(() => booking.value.totalDays > 1)
 const isLastDay = computed(() => multiDay.value && booking.value.dayNumber === booking.value.totalDays)
+// Owner: today's report opens with View report once today is done (and Prev reaches earlier days from there).
+// Until then, earlier days' reports open with "Earlier reports", even while today's session is in progress.
+const canViewToday = computed(() => !props.isSitter && isCompleted.value && !isLastDay.value && multiDay.value)
+const earlierReports = computed(() => (props.session.finishedDays ?? 0) - (isCompleted.value ? 1 : 0))
+const showEarlier = computed(() => !props.isSitter && !canViewToday.value && earlierReports.value > 0)
 const metaLine = computed(() => [
   joinNames((booking.value.pets ?? []).map((p) => p.name)),
   multiDay.value ? `Day ${booking.value.dayNumber} of ${booking.value.totalDays}` : '',
@@ -430,10 +435,16 @@ const shownEvents = computed(() => (allEvents.value ? events.value : events.valu
             </button>
           </template>
           <!-- owner, a finished day that isn't the booking's last: the report opens in the report window -->
-          <button v-else-if="!isSitter && isCompleted && !isLastDay && multiDay" type="button" class="sc-report-btn"
+          <button v-else-if="canViewToday" type="button" class="sc-report-btn"
                   @click="emit('view-report')">View report</button>
-          <small v-else-if="!isSitter && isActive && locationNote" class="sc-status__right sc-wide"
-                 :class="{ 'sc-status__right--warn': locationNote.warn }">{{ locationNote.text }}</small>
+          <div v-else-if="!isSitter && ((isActive && locationNote) || showEarlier)" class="sc-status__end">
+            <small v-if="isActive && locationNote" class="sc-status__right sc-wide"
+                   :class="{ 'sc-status__right--warn': locationNote.warn }">{{ locationNote.text }}</small>
+            <!-- owner: reports from the booking's earlier days, readable even while today's session is going -->
+            <button v-if="showEarlier" type="button" class="sc-report-btn" @click="emit('view-earlier')">
+              Earlier reports ({{ earlierReports }})
+            </button>
+          </div>
         </div>
 
         <!-- the location check didn't pass: try again, or start with a note for the owner -->
@@ -855,6 +866,14 @@ const shownEvents = computed(() => (allEvents.value ? events.value : events.valu
   outline: 3px solid var(--accent-deep);
   outline-offset: 2px;
 }
+.sc-status__end {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem 0.9rem;
+}
 .sc-report-btn {
   flex: none;
   min-height: 40px;
@@ -1247,7 +1266,14 @@ fieldset:disabled .photo-slot {
     width: 100%;
   }
   .sc-status {
+    flex-wrap: wrap;
     padding: 0.65rem 1rem;
+  }
+  /* the owner's "Earlier reports" goes on its own line, under the status text */
+  .sc-status__end {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    padding-left: 1.25rem;
   }
   .sc-wide {
     display: none;

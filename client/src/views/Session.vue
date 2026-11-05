@@ -111,6 +111,18 @@ async function viewTodayReport(s) {
     reportError.value = err.response?.data?.message || 'Could not load the report.'
   }
 }
+// "Earlier reports" on the Today card: the booking's finished days only (not today's session in progress),
+// opened at the most recent one; Prev steps back through the rest
+async function viewEarlierReports(s) {
+  reportError.value = ''
+  try {
+    const entry = await visitsApi.report(s.booking._id)
+    const days = entry.days.filter((d) => d.visit.status === 'completed')
+    if (days.length) report.value = { entry: { ...entry, days }, dayIndex: days.length - 1 }
+  } catch (err) {
+    reportError.value = err.response?.data?.message || 'Could not load the reports.'
+  }
+}
 
 // ---- Owner's phone tabs ----
 const tab = ref('today')
@@ -203,7 +215,7 @@ function onTouchEnd(e) {
         <SessionCard v-for="s in sessions" v-show="s.booking._id === selectedId" :key="s.booking._id" :session="s"
                      :is-sitter="isSitter" :active="s.booking._id === selectedId"
                      @visit-change="s.visit = $event" @unread="unread[s.booking._id] = $event" @walk-ended="load(true)"
-                     @items-change="s.items = $event" @view-report="viewTodayReport(s)" />
+                     @items-change="s.items = $event" @view-report="viewTodayReport(s)" @view-earlier="viewEarlierReports(s)" />
       </template>
     </section>
 
