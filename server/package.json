@@ -9,7 +9,8 @@
     "dev": "nodemon server.js",
     "seed": "node src/seed/seedDemo.js",
     "seed:demo": "node src/seed/seedDemo.js",
-    "seed:e2e": "node src/seed/e2e/e2eSeed.js"
+    "seed:e2e": "node src/seed/e2e/e2eSeed.js",
+    "seed:kieran-reviews": "node src/seed/seedKieranReviews.js"
   },
   "dependencies": {
     "@turf/turf": "^7.4.0",
