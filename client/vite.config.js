@@ -18,7 +18,8 @@ export default defineConfig({
     proxy: {
       // Forwards /api requests to the Express server during development
       '/api': {
-        target: 'http://localhost:5000',
+        // (the e2e tests run their own server and set API_PROXY_TARGET to it, see e2e/e2eEnv.js)
+        target: process.env.API_PROXY_TARGET || 'http://localhost:5000',
         changeOrigin: true
       }
     }

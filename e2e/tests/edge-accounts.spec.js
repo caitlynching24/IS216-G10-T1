@@ -98,7 +98,7 @@ test.describe('Register: the page', () => {
     await page.getByPlaceholder('Password', { exact: true }).fill(PASSWORD)
     await page.getByPlaceholder('Confirm password').fill('Different123!')
     await page.getByRole('button', { name: 'Sign up' }).click()
-    await expect(page.getByRole('alert')).toContainText("The two passwords don't match.")
+    await expect(page.getByRole('alert')).toContainText('Passwords do not match.')
   })
 
   test('server problems are all listed on the page', async ({ page }) => {

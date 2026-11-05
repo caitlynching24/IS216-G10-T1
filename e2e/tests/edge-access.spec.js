@@ -55,11 +55,8 @@ test.describe('Logged out', () => {
     await expect(page.getByRole('navigation').getByRole('link', { name: 'My Bookings' })).toHaveCount(0)
   })
 
-  // KNOWN GAP (feature list, Access control): the router has `auth` tags but never checks them,
-  // so the page opens and only its API calls fail. test.fail() means "we expect this to fail for now".
-  // When the team adds a router guard, this test will start passing and Playwright will tell you to remove test.fail().
-  test('KNOWN GAP: a logged-out visitor is sent to /login', async ({ page }) => {
-    test.fail()
+  // The router guard (client/src/router/index.js) sends logged-out visitors to /login before an owner-only page opens
+  test('a logged-out visitor is sent to /login', async ({ page }) => {
     await page.goto('/owner/bookings')
     await expect(page).toHaveURL(/\/login/, { timeout: 3_000 })
   })
@@ -72,16 +69,15 @@ test.describe('Signed in as the owner', () => {
     await expectError(await page.request.get('/api/availability/me'), 403, 'Sitters only.')
   })
 
+  // Sitter-only pages: the router guard sends an owner back to their own home page
   test('the Transactions page is refused', async ({ page }) => {
     await page.goto('/sitter/transactions')
-    await expect(page.getByText('This page is for pet sitters.')).toBeVisible()
+    await expect(page).toHaveURL(/\/home$/)
   })
 
-  // KNOWN GAP: /sitter/requests loads the owner's own bookings instead of refusing
-  test('KNOWN GAP: the Booking Requests page is refused', async ({ page }) => {
-    test.fail()
+  test('the Booking Requests page is refused', async ({ page }) => {
     await page.goto('/sitter/requests')
-    await expect(page.getByText(/Sitters only|for pet sitters/)).toBeVisible({ timeout: 3_000 })
+    await expect(page).toHaveURL(/\/home$/, { timeout: 3_000 })
   })
 
   test('the menu shows the owner pages only', async ({ page }) => {
@@ -104,9 +100,10 @@ test.describe('Signed in as a sitter', () => {
     await expectError(await page.request.get('/api/pets'), 403, 'Owners only.')
   })
 
+  // Owner-only pages: the router guard sends a sitter back to their own home page
   test('My Bookings is refused', async ({ page }) => {
     await page.goto('/owner/bookings')
-    await expect(page.getByText('This page is for pet owners.')).toBeVisible()
+    await expect(page).toHaveURL(/\/home$/)
   })
 
   test('the menu shows the sitter pages only', async ({ page }) => {

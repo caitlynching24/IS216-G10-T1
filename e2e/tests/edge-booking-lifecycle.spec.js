@@ -139,7 +139,7 @@ test.describe('Expired requests (P4)', () => {
   test('an expired booking shows as Expired', async () => {
     const page = await owner.context.newPage()
     await page.goto(`/bookings/${ids.booking(SEED.expired)}`)
-    await expect(page.getByText('This request expired: the start time passed before the owner confirmed it.')).toBeVisible()
+    await expect(page.getByText('This booking is no longer valid: its start time has passed.')).toBeVisible()
     await page.close()
   })
 })

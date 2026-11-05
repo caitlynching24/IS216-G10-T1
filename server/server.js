@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 5000
 async function start() {
   try {
     await ensureDB()
-    startExpiringBookings() // unconfirmed requests expire once their start time passes
+    startExpiringBookings() 
     startEndingForgottenSessions() // sessions the sitter never ended close 6 hours after their end time
     recalcAllRatings().catch((err) => console.error('Rating recalculation failed', err))
     watchReviews()

@@ -41,8 +41,22 @@ export async function expireStaleBookings() {
   }
 }
 
+export async function expirePastBookings() {
+  const confirmed = await Booking.find({ status: 'confirmed' }).select('startDate endDate startTime endTime')
+  const now = Date.now()
+  const ids = confirmed.filter((b) => bookingRange(b).end < now).map((b) => b._id)
+  if (ids.length === 0) {
+    return
+  }
+  await Booking.updateMany({ _id: { $in: ids }, status: 'confirmed' }, { status: 'expired' })
+}
+
 // Called once when the server starts: checks straight away, then every 5 minutes
 export function startExpiringBookings() {
-  expireStaleBookings()
-  setInterval(expireStaleBookings, CHECK_EVERY_MS)
+  const runBoth = () => {
+    expireStaleBookings()
+    expirePastBookings().catch((err) => console.error('Could not expire past bookings:', err.message))
+  }
+  runBoth()
+  setInterval(runBoth, CHECK_EVERY_MS)
 }

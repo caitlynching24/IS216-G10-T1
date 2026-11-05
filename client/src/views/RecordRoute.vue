@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { length, lineString, simplify } from '@turf/turf'
 import WalkMap from '../components/WalkMap.vue'
+import { useFitHeight } from '../utils/useFitHeight.js'
 import { useGeoTracker } from '../utils/useGeoTracker.js'
 import { useHomeCheck, HOME_RADIUS_M } from '../utils/useHomeCheck.js'
 import { currentUser, fetchUser } from '../services/auth.js'
@@ -13,6 +14,10 @@ const { position, path, accuracy, error, start, startRecording, stopRecording } 
 
 // Which stage the page is at: 'loading' -> 'ready' -> 'recording' -> 'naming' -> 'saved'
 const step = ref('loading');
+
+// the map fills the rest of the screen without scrolling (gap: this page's padding plus the main area's)
+const mapRef = ref(null)
+useFitHeight(mapRef, { gap: 40 })
 const routeName = ref('');
 const saving = ref(false);
 const saveError = ref('');
@@ -106,7 +111,7 @@ async function save() {
 </script>
 
 <template>
-  <div class="d-flex flex-column vh-100 p-3 gap-3">
+  <div class="d-flex flex-column p-3 gap-3">
     <header>
       <!-- <router-link :to="{ name: 'my-routes' }" class="btn btn-link text-secondary p-0 mb-1">← My routes</router-link> -->
       <BackButton label="My Routes"></BackButton>
@@ -188,7 +193,8 @@ async function save() {
       </div>
 
       <WalkMap
-        class="flex-grow-1 rounded-3 border"
+        ref="mapRef"
+        class="rounded-3 border"
         :home="home"
         :home-radius-m="HOME_RADIUS_M"
         :position="position"

@@ -3,6 +3,7 @@ import { ref, shallowRef, onMounted, onBeforeUnmount, watch } from 'vue'
 import currentLocationImg from '../assets/img/currentLocationIcon.png'
 import L from 'leaflet'
 import { useRouter } from 'vue-router'
+import { createLocateButton } from '../utils/locateMe.js'
 
 const props = defineProps({profiles:Array, origin: { type: Object, default: null }, userLocation: { type: Object, default: null }})
 const router = useRouter()
@@ -79,6 +80,15 @@ function showUser(u) {
 
 watch(() => props.userLocation, showUser)
 
+// the locate button: moves the "You are here" marker to the user and flies there
+function locateMe(u) {
+  if (!map.value) return
+  userMarker?.remove()
+  userMarker = L.marker([u.lat, u.lng], { icon: currentLocationIcon })
+    .addTo(map.value).bindPopup('You are here')
+  map.value.flyTo([u.lat, u.lng], Math.max(map.value.getZoom(), 14))
+}
+
 onMounted(()=>{
     //initialise map inside of map container
      map.value = L.map(mapContainer.value).setView([1.3521, 103.8198], 12);
@@ -90,6 +100,17 @@ onMounted(()=>{
     }).addTo(map.value);
 
     sitterLayer.addTo(map.value)
+
+    // "locate me" button under the zoom buttons: re-centres the map on the user
+    const LocateControl = L.Control.extend({
+      onAdd: () => {
+        const el = createLocateButton(locateMe)
+        el.classList.add('leaflet-control', 'locate-control')
+        L.DomEvent.disableClickPropagation(el)
+        return el
+      }
+    })
+    new LocateControl({ position: 'topleft' }).addTo(map.value)
 
 
     showUser(props.userLocation)

@@ -4,6 +4,7 @@ import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { circle } from '@turf/turf'
+import { createLocateButton, createMeDot } from '../utils/locateMe.js'
 
 // Tell MapLibre where Vite put its worker file (it can't find it on its own)
 maplibregl.setWorkerUrl(workerUrl)
@@ -55,6 +56,22 @@ const homeArea = (h) => h
 
 let marker = null;
 let homeMarker = null;
+let meMarker = null;   // the user's own spot, shown after they press the locate button
+
+// "locate me" button: puts a blue dot on the user and re-centres the map there
+const locateControl = {
+  onAdd() {
+    const el = createLocateButton(({ lat, lng }) => {
+      if (!map) return
+      meMarker ??= new maplibregl.Marker({ element: createMeDot() }).setLngLat([lng, lat]).addTo(map)
+      meMarker.setLngLat([lng, lat])
+      map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 16) })
+    })
+    el.classList.add('maplibregl-ctrl', 'locate-control')
+    return el
+  },
+  onRemove() {}
+}
 
 // puts the home marker (and its circle) on the map
 function showHome(h) {
@@ -89,6 +106,7 @@ onMounted(() => {
 
   // adds zoom and compass onto map
   map.addControl(new maplibregl.NavigationControl(), 'top-right')  // zoom buttons
+  map.addControl(locateControl, 'top-right')  // "locate me" button, under the zoom buttons
   
   // waits until map is finished loading to load own data
   map.on('load', ()=> {

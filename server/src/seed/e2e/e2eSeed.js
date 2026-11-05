@@ -1,27 +1,29 @@
-// Run from the server folder with:  pnpm seed
-// Safe to run many times: it only deletes the fake data it created itself
-// (users whose email is in SEED_EMAILS, and everything linked to them). Nobody else's data is touched.
-
+// Test data for the Playwright end-to-end tests (e2e/), NOT the demo data (that's pnpm seed / seedDemo.js).
+// The tests are written against exactly this data: the seed.* accounts (SeedOwner, SeedSitter, SecondSitter and others),
+// pets Mochi and Luna, the SMU loop route, and bookings they find by their notes ("Done and paid", "Walk test", ...).
+// e2e/global-setup.js runs it (pnpm seed:e2e) on the tests' own database before every test run.
+// It refuses to run on any database whose name doesn't contain "e2e", so it can never touch real or demo data.
+// Safe to run many times: it only deletes the seed.* accounts and everything linked to them.
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import bcrypt from 'bcrypt'
-import connectDB from '../config/db.js'
-import User from '../models/UserModel.js'
-import Pet from '../models/petModel.js'
-import Booking from '../models/bookingModel.js'
-import CareChecklist from '../models/CareChecklist.js'
-import Payment from '../models/paymentModel.js'
-import Review from '../models/reviewModel.js'
-import WalkRoute from '../models/walkRouteModel.js'
-import Walk from '../models/walkModel.js'
-import VisitSession from '../models/VisitSession.js'
-import Notification from '../models/notificationModel.js'
-import Availability from '../models/Availability.js'
-import { priceForTasks } from '../utils/servicePrices.js'
-import { pathLength } from '../utils/walkGeo.js'
-import Message from '../models/Message.js'
-import { seedSessionPage } from './seedSessions.js'
-import { recalcSitterRating } from '../utils/ratingsCalc.js'
+import connectDB from '../../config/db.js'
+import User from '../../models/UserModel.js'
+import Pet from '../../models/petModel.js'
+import Booking from '../../models/bookingModel.js'
+import CareChecklist from '../../models/CareChecklist.js'
+import Payment from '../../models/paymentModel.js'
+import Review from '../../models/reviewModel.js'
+import WalkRoute from '../../models/walkRouteModel.js'
+import Walk from '../../models/walkModel.js'
+import VisitSession from '../../models/VisitSession.js'
+import Notification from '../../models/notificationModel.js'
+import Availability from '../../models/Availability.js'
+import { priceForTasks } from '../../utils/servicePrices.js'
+import { pathLength } from '../../utils/walkGeo.js'
+import Message from '../../models/Message.js'
+import { seedSessionPage } from './e2eSessions.js'
+import { recalcSitterRating } from '../../utils/ratingsCalc.js'
 
 const SEED_PASSWORD = 'Password123!'
 const SEED_TAG = '[seed]'
@@ -218,6 +220,10 @@ async function clearOldSeed() {
 
 async function seed() {
   await connectDB()
+  const dbName = mongoose.connection.db.databaseName
+  if (!dbName.includes('e2e')) {
+    throw new Error(`Refusing to run the e2e test seed on "${dbName}": it only runs on the tests' own database (e.g. petsociety_e2e)`)
+  }
   const cleared = await clearOldSeed()
   console.log(`Removed the old seed: ${cleared.users} users, ${cleared.bookings} bookings (and their data)`)
 
@@ -575,8 +581,8 @@ async function seed() {
   const counts = {}
   for (const b of bookings) counts[b.status] = (counts[b.status] ?? 0) + 1
 
-  // The Session page: today's sessions in different states, and finished bookings with care reports (seedSessions.js).
-  // seedSessions.js lists a booking's hours and tasks as plain arguments; this passes them on as makeBooking's opts.
+  // The Session page: today's sessions in different states, and finished bookings with care reports (e2eSessions.js).
+  // e2eSessions.js lists a booking's hours and tasks as plain arguments; this passes them on as makeBooking's opts.
   const bookFor = (o, s, pets, day, start, end, status, notes, tasks, length = 1, hoursByDay = null) =>
     makeBooking(o, s, pets, day, status, notes, { hours: hoursByDay ?? [start, end], length, tasks })
   await seedSessionPage({ owner, sitter, sitter2, mochi, luna, smuLoop }, {

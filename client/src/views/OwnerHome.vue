@@ -1,6 +1,7 @@
 <script setup>
 import { currentUser } from "../services/auth.js";
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue';
+import { useFitHeight } from '../utils/useFitHeight.js';
 import L from 'leaflet';
 import axios from 'axios';
 import SitterProfileCard from '../components/SitterProfileCard.vue'
@@ -27,6 +28,10 @@ const loadingSitters = ref(true)
 
 const showMapModal = ref(false)
 const isLg = ref(false)
+
+// the side map fits the screen without scrolling (measured from its column, as the panel itself is sticky)
+const mapPanel = ref(null)
+useFitHeight(mapPanel, { gap: 16, fromWidth: 992, fromParent: true })
 let mq = null
 
 function syncLg(e) {
@@ -483,7 +488,7 @@ onBeforeUnmount(() => {
         <!-- search body  -->
         <div class="col-md-8 col-lg-5">
 
-          <div class="d-flex align-items-center gap-2 mb-2">
+          <div class="mobile-actions d-flex align-items-center gap-2 mb-2 d-lg-none">
             <button type="button" class="btn btn-brand-outline btn-sm fw-bold flex-fill d-md-none"
               data-bs-toggle="offcanvas"
               data-bs-target="#offcanvasBottom"
@@ -547,7 +552,7 @@ onBeforeUnmount(() => {
 
         <!-- map: right column at lg only -->
         <div class="col-lg-5 d-none d-lg-block">
-          <div class="map-panel">
+          <div ref="mapPanel" class="map-panel">
             <SitterMap v-if="isLg" :profiles="searchResults" :origin="origin" :userLocation="userLocation" />
           </div>
         </div>
@@ -680,5 +685,9 @@ onBeforeUnmount(() => {
 .map-close:hover,
 .map-close:focus-visible {
   background: #2b2420;
+}
+/* large screens: cards start level with the filter panel and map */
+@media (min-width: 992px) {
+  .mobile-actions + .sitter-list { margin-top: 0; }
 }
 </style>

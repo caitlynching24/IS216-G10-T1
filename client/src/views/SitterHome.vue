@@ -77,7 +77,7 @@ onMounted(loadDashboard)
       <!-- Stat tiles -->
       <div class="row g-3 mb-4">
         <div class="col-12 col-md-4">
-          <router-link to="/sitter/requests" class="card h-100 text-decoration-none text-body stat-tile">
+          <router-link :to="{ path: '/sitter/requests', query: { tab: 'awaiting-confirmation' } }" class="card h-100 text-decoration-none text-body stat-tile">
             <div class="card-body slim-tile">
               <div class="fs-3 fw-bold stat-number">{{ newRequests.length }}</div>
               <div class="tile-label">New requests<span class="text-muted small d-none d-md-block">Waiting for your reply</span></div>
@@ -85,20 +85,20 @@ onMounted(loadDashboard)
           </router-link>
         </div>
         <div class="col-6 col-md-4">
-          <div class="card h-100">
+          <router-link :to="{ path: '/sitter/requests', query: { tab: 'upcoming' } }" class="card h-100 text-decoration-none text-body stat-tile">
             <div class="card-body slim-tile">
               <div class="fs-3 fw-bold stat-number">{{ upcoming.length }}</div>
               <div class="tile-label">Upcoming<span class="text-muted small d-none d-md-block">Accepted or paid</span></div>
             </div>
-          </div>
+          </router-link>
         </div>
         <div class="col-6 col-md-4">
-          <div class="card h-100">
+          <router-link :to="{ path: '/sitter/requests', query: { tab: 'pending' } }" class="card h-100 text-decoration-none text-body stat-tile">
             <div class="card-body slim-tile">
               <div class="fs-3 fw-bold stat-number">{{ todayCount }}</div>
               <div class="tile-label">Today<span class="text-muted small d-none d-md-block">Bookings today</span></div>
             </div>
-          </div>
+          </router-link>
         </div>
       </div>
 
@@ -218,7 +218,7 @@ onMounted(loadDashboard)
   background-color: var(--accent-deep);
 }
 .main-btn:hover {
-  background-color: #a8431a;
+  background-color: var(--accent-deep-hover);
   color: #fff;
 }
 .outline-btn {

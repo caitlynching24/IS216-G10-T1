@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { length, lineString } from '@turf/turf'
 import WalkMap from '../components/WalkMap.vue'
+import { useFitHeight } from '../utils/useFitHeight.js'
 import { HOME_RADIUS_M } from '../utils/useHomeCheck.js'
 import { WARN_M, NOTIFY_M } from '../utils/useDeviationCheck.js'
 import {
@@ -15,6 +16,10 @@ import BackButton from '../components/BackButton.vue'
 const pageRoute = useRoute()
 const router = useRouter()
 const walkId = pageRoute.params.id
+
+// the map fills the rest of the screen without scrolling (gap: this page's padding plus the main area's)
+const mapRef = ref(null)
+useFitHeight(mapRef, { gap: 40 })
 
 const walk = ref(null)        // the walk from the server
 const loadError = ref('')
@@ -144,7 +149,7 @@ async function endWalkEarly() {
 
 <template>
   <BackButton label='Back' class="mt-1 mb-0"></BackButton>
-  <div class="d-flex flex-column vh-100 p-3 gap-3">
+  <div class="d-flex flex-column p-3 gap-3">
     <header>
       <h1 class="page-title mb-1">{{ walk?.routeName || 'Walk' }}</h1>
       <p class="text-body-secondary mb-0">
@@ -300,7 +305,8 @@ async function endWalkEarly() {
       </div>
 
       <WalkMap
-        class="flex-grow-1 rounded-3 border"
+        ref="mapRef"
+        class="rounded-3 border"
         :home="home"
         :home-radius-m="HOME_RADIUS_M"
         :position="isFinished ? null : position"

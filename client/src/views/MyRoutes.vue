@@ -5,6 +5,7 @@ import WalkMap from '../components/WalkMap.vue'
 import { currentUser, fetchUser } from '../services/auth.js'
 import { walkRoutesApi } from '../services/walkRouteApi.js'
 import { HOME_RADIUS_M } from '../utils/useHomeCheck.js'
+import { useFitHeight } from '../utils/useFitHeight.js'
 
 const router = useRouter()
 
@@ -14,6 +15,10 @@ const loadError = ref('')
 const selectedId = ref(null)        // the route shown on the map
 const renamingId = ref(null)        // the route whose name is being edited
 const newName = ref('')
+
+// on computers the map fills the rest of the screen without scrolling (on phones it sits under the list)
+const mapRef = ref(null)
+useFitHeight(mapRef, { gap: 40, fromWidth: 768 })
 const confirmingDeleteId = ref(null) // the route showing "Delete this route?"
 const busyId = ref(null)            // the route waiting on the server
 const actionError = ref('')
@@ -179,6 +184,7 @@ function reRecord(walkRoute) {
       <!-- Map of the selected route -->
       <div class="col-md-7 col-lg-8">
         <WalkMap
+          ref="mapRef"
           class="route-map rounded-3 border"
           :home="home"
           :home-radius-m="HOME_RADIUS_M"
@@ -231,9 +237,6 @@ function reRecord(walkRoute) {
   .route-list {
     max-height: calc(100vh - 160px);
     overflow-y: auto;
-  }
-  .route-map {
-    height: calc(100vh - 160px);
   }
 }
 </style>

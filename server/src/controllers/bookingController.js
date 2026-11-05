@@ -3,6 +3,7 @@ import CareChecklist from '../models/CareChecklist.js'
 import { notifyBookingOnce } from '../models/notificationModel.js'
 import { syncBookingToGoogle } from '../utils/googleCalendar.js'
 import { bookingRange, dailyRanges, findClash, findPetClash, describeBooking } from '../utils/bookingTimes.js'
+import { expirePastBookings } from '../utils/expireBookings.js'
 
 // GET /api/bookings                         -> all my bookings
 // GET /api/bookings?status=pending,accepted -> only those statuses
@@ -10,6 +11,7 @@ export const getMyBookings = async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ message: 'Not logged in' })
   }
+  await expirePastBookings().catch((err) => console.error('Could not expire old bookings', err))
 
   const filter =
     req.session.role === 'sitter'
