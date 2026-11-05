@@ -118,6 +118,14 @@ export async function getTodaySessions(req, res) {
 
   const isSitterViewer = req.session.role === 'sitter'
 
+  // owners: how many days of each booking have a finished report, so they can read earlier days' reports
+  // while the booking is still going (even with today's session in progress or not started)
+  const finishedCounts = isSitterViewer ? [] : await VisitSession.aggregate([
+    { $match: { booking: { $in: ids }, status: 'completed' } },
+    { $group: { _id: '$booking', n: { $sum: 1 } } }
+  ])
+  const finishedByBooking = new Map(finishedCounts.map((c) => [String(c._id), c.n]))
+
   // the owner's live location: only their own bookings, and only during an active session
   const locations = isSitterViewer ? [] : await VisitSession.find({ _id: { $in: visits.filter((v) => v.status === 'active').map((v) => v._id) } })
     .select('date home lastLocation locationBlocked')
@@ -181,6 +189,7 @@ export async function getTodaySessions(req, res) {
       // distanceSoFarM: for the owner's "On a walk, 0.6 km so far"
       session.activeWalk = walk ? { ...walk.toObject(), distanceSoFarM: walk.liveDistanceM } : null
       session.walks = session.visit ? dayWalks.filter((w) => String(w.visit) === String(session.visit._id)) : []
+      if (!isSitterViewer) session.finishedDays = finishedByBooking.get(String(b._id)) ?? 0
       if (session.visit?.status === 'active') {
         const located = locationByVisit.get(String(session.visit._id))
         if (located) session.liveLocation = liveLocationFor(located, b, session.activeWalk)
