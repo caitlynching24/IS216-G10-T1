@@ -225,7 +225,7 @@ onMounted(async () => {
   <!-- left: the numbered steps; right (big screens): the summary, which stays in view while scrolling. On phones: one column and a bar at the bottom with the Total and Send. -->
   <template v-else-if="sitter">
   <div class="row g-3 align-items-start">
-    <div class="col-lg-8 d-flex flex-column gap-3">
+    <div class="col-lg-8 col-xl-9 d-flex flex-column gap-3">
       <!-- Who you're booking: photo, name, stars and services (first in the left column, so it is as wide as the steps and level with the summary) -->
       <div class="sitter-chip">
         <img class="avatar rounded-circle" :src="sitter.profilePicture?.url || defaultAvatar" alt="">
@@ -298,7 +298,7 @@ onMounted(async () => {
     </div>
 
     <!-- Price preview (beside the form on big screens, under it on phones, with the Send button) -->
-    <div class="col-lg-4">
+    <div class="col-lg-4 col-xl-3 nbr-summary-col">
       <div class="step-card nbr-summary">
           <h3 class="step-head">Summary</h3>
           <!-- what was chosen so far -->
@@ -359,11 +359,10 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* same centred width idea as the Booking Detail page, so the form doesn't stretch across a big screen */
-.nbr {
-  max-width: 1140px;
+/* the Days calendar stops at 640px (centred in its card), so the day buttons don't stretch on a wide screen */
+.nbr :deep(.rgrid) {
+  max-width: 640px;
   margin-inline: auto;
-  padding: 0.5rem 1.25rem 2.5rem;
 }
 .nbr-title { font-size: 1.6rem; font-weight: 800; margin: 0.25rem 0 0.15rem; }
 .nbr-sub { color: #6b5f56; margin-bottom: 1.25rem; }
@@ -433,6 +432,10 @@ onMounted(async () => {
 /* summary: stays in view beside the form on big screens */
 @media (min-width: 992px) {
   .nbr-summary { position: sticky; top: calc(7vh + 1rem); }
+  /* the column runs the full height of the steps, so the sticky card has room to stay in view all the way down to Notes;
+     a long summary scrolls inside the card so the Send button can always be reached */
+  .nbr-summary-col { align-self: stretch; }
+  .nbr-summary { max-height: calc(100vh - 7vh - 2rem); overflow-y: auto; }
 }
 .sum-row { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.9rem; padding: 0.15rem 0; }
 .sum-row > span:first-child { color: #6b5f56; }

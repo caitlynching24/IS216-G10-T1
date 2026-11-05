@@ -49,7 +49,6 @@ watch(() => props.profile._id, async (id) => {
   border-radius: 20px;
   background: var(--tint-soft);                   
   box-shadow: 0 8px 20px rgba(120, 70, 40, 0.14);
-  height: 98%
 }
 
 .ph-photo {
@@ -84,18 +83,12 @@ watch(() => props.profile._id, async (id) => {
 }
 .ph-badges {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   width: 100%;
   gap: 0.4rem;
   margin: 0.9rem 0 0;
   padding: 0;
   list-style: none;
-}
-@media (min-width: 992px) {
-  .ph-badges {
-    width: fit-content;
-    max-width: 100%;
-  }  
 }
 @media (max-width: 767.98px) {
   .ph-card {

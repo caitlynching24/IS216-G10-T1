@@ -264,7 +264,7 @@ async function save() {
 </script>
 
 <template>
-  <div v-if="currentUser" class="mx-auto mt-4 mb-4 px-2" style="max-width: 1100px">
+  <div v-if="currentUser" class="ep">
     <h3 class="border-bottom pb-2 mb-4">Edit profile</h3>
     <BackButton label="Back"></BackButton>
     <form @submit.prevent="save">
@@ -374,7 +374,7 @@ async function save() {
             <p class="ef-card__hint">Owners use these to find and compare sitters.</p>
 
             <div class="row g-3 mb-3">
-              <div class="col-12 col-sm-6">
+              <div class="col-12 col-sm-6 col-xl-4">
                 <label class="form-label" for="since">Sitting since</label>
                 <input id="since" v-model="form.sitterProfile.experienceStart" type="month" class="form-control" />
               </div>
@@ -548,6 +548,11 @@ async function save() {
   background: var(--tint-soft);
 }
 
+/* one-line boxes (username, address, unit...) stop at 520px so they don't stretch across a wide screen */
+.ep :deep(input.form-control:not([type='file'])),
+.ep :deep(.input-group) {
+  max-width: 520px;
+}
 .ef-who {
   display: grid;
   grid-template-columns: 150px minmax(0, 1fr);
