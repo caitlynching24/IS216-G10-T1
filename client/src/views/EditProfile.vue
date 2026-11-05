@@ -265,8 +265,8 @@ async function save() {
 
 <template>
   <div v-if="currentUser" class="ep">
-    <h3 class="border-bottom pb-2 mb-4">Edit profile</h3>
     <BackButton label="Back"></BackButton>
+    <h3 class="border-bottom pb-2 mb-4">Edit profile</h3>
     <form @submit.prevent="save">
       <div class="row g-4">
         <!-- side column: private -->
