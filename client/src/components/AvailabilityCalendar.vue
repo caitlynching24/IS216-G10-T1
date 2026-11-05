@@ -353,16 +353,16 @@ function tapBooking(b) {
       </div>
       <div class="d-flex flex-wrap align-items-center gap-3">
         <div class="btn-group" role="group" aria-label="Calendar view">
-          <button type="button" class="btn" :class="view === 'month' ? 'btn-accent' : 'btn-outline-secondary'" @click="view = 'month'">Month</button>
-          <button type="button" class="btn" :class="view === 'week' ? 'btn-accent' : 'btn-outline-secondary'" @click="view = 'week'">Week</button>
+          <button type="button" class="btn" :class="view === 'month' ? 'btn-brand' : 'btn-outline-secondary'" @click="view = 'month'">Month</button>
+          <button type="button" class="btn" :class="view === 'week' ? 'btn-brand' : 'btn-outline-secondary'" @click="view = 'week'">Week</button>
         </div>
         <!-- dragging only works with a mouse, so phones and tablets don't get these buttons -->
         <!-- flex-wrap: in a narrow window the two buttons go under "Drag to" instead of running off the page -->
         <div v-if="editable && canHover" class="d-flex flex-wrap align-items-center gap-2 small text-muted">
           Drag to
           <div class="btn-group flex-wrap" role="group" aria-label="What dragging does">
-            <button type="button" class="btn" :class="mode === 'available' ? 'btn-accent' : 'btn-outline-secondary'" @click="mode = 'available'">Make available</button>
-            <button type="button" class="btn" :class="mode === 'blocked' ? 'btn-accent' : 'btn-outline-secondary'" @click="mode = 'blocked'">Make unavailable</button>
+            <button type="button" class="btn" :class="mode === 'available' ? 'btn-brand' : 'btn-outline-secondary'" @click="mode = 'available'">Make available</button>
+            <button type="button" class="btn" :class="mode === 'blocked' ? 'btn-brand' : 'btn-outline-secondary'" @click="mode = 'blocked'">Make unavailable</button>
           </div>
         </div>
       </div>
@@ -580,7 +580,7 @@ function tapBooking(b) {
 }
 .cal-nav-btn:hover { background: #f3e2d9; border-color: var(--accent); }
 .cal-nav-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-.back-link { border: 0; background: none; padding: 10px 4px; color: #a85f40; font-weight: 700; font-size: 0.88rem; text-decoration: underline; text-underline-offset: 3px; }
+.back-link { border: 0; background: none; padding: 10px 4px; color: var(--accent-deep); font-weight: 700; font-size: 0.88rem; text-decoration: underline; text-underline-offset: 3px; }
 
 /* ----- month view ----- */
 .calendar {
